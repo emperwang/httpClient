@@ -86,7 +86,7 @@ public class RedirectExec implements ClientExecChain {
         this.routePlanner = routePlanner;
         this.redirectStrategy = redirectStrategy;
     }
-
+    // 重定向执行
     @Override
     public CloseableHttpResponse execute(
             final HttpRoute route,

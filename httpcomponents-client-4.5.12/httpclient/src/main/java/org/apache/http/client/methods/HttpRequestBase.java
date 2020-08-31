@@ -47,7 +47,7 @@ public abstract class HttpRequestBase extends AbstractExecutionAwareRequest
     private ProtocolVersion version;
     private URI uri;
     private RequestConfig config;
-
+    // 请求方法
     @Override
     public abstract String getMethod();
 
@@ -98,7 +98,7 @@ public abstract class HttpRequestBase extends AbstractExecutionAwareRequest
     public void setConfig(final RequestConfig config) {
         this.config = config;
     }
-
+    // 设置请求的 uri
     public void setURI(final URI uri) {
         this.uri = uri;
     }

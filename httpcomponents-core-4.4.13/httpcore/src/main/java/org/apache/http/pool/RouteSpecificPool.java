@@ -38,8 +38,11 @@ import org.apache.http.util.Asserts;
 abstract class RouteSpecificPool<T, C, E extends PoolEntry<T, C>> {
 
     private final T route;
+    // 租用的 连接
     private final Set<E> leased;
+    // 可用的连接
     private final LinkedList<E> available;
+    // 等待中的
     private final LinkedList<Future<E>> pending;
 
     RouteSpecificPool(final T route) {
@@ -71,7 +74,7 @@ abstract class RouteSpecificPool<T, C, E extends PoolEntry<T, C>> {
     public int getAllocatedCount() {
         return this.available.size() + this.leased.size();
     }
-
+    // 从此 route pool中获取一个entry
     public E getFree(final Object state) {
         if (!this.available.isEmpty()) {
             if (state != null) {
@@ -101,7 +104,7 @@ abstract class RouteSpecificPool<T, C, E extends PoolEntry<T, C>> {
     public E getLastUsed() {
         return this.available.isEmpty() ? null : this.available.getLast();
     }
-
+    // 从 routePool 中移除 entry
     public boolean remove(final E entry) {
         Args.notNull(entry, "Pool entry");
         if (!this.available.remove(entry)) {

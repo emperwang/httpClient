@@ -74,13 +74,16 @@ import org.apache.http.util.NetUtils;
  * @since 4.0
  */
 public class BHttpConnectionBase implements HttpInetConnection {
-
+    // 输入流以及缓冲区
     private final SessionInputBufferImpl inBuffer;
+    // 输出流 以及 缓冲区
     private final SessionOutputBufferImpl outbuffer;
+    //
     private final MessageConstraints messageConstraints;
     private final HttpConnectionMetricsImpl connMetrics;
     private final ContentLengthStrategy incomingContentStrategy;
     private final ContentLengthStrategy outgoingContentStrategy;
+    // 保存socket连接
     private final AtomicReference<Socket> socketHolder;
 
     /**
@@ -111,8 +114,10 @@ public class BHttpConnectionBase implements HttpInetConnection {
         Args.positive(bufferSize, "Buffer size");
         final HttpTransportMetricsImpl inTransportMetrics = new HttpTransportMetricsImpl();
         final HttpTransportMetricsImpl outTransportMetrics = new HttpTransportMetricsImpl();
+        // 输入流时 SessionInputBufferImpl, 且可以指定编码
         this.inBuffer = new SessionInputBufferImpl(inTransportMetrics, bufferSize, -1,
                 messageConstraints != null ? messageConstraints : MessageConstraints.DEFAULT, charDecoder);
+        // 输出流  都是SessionInputBufferImpl
         this.outbuffer = new SessionOutputBufferImpl(outTransportMetrics, bufferSize, fragmentSizeHint,
                 charEncoder);
         this.messageConstraints = messageConstraints;
@@ -132,7 +137,9 @@ public class BHttpConnectionBase implements HttpInetConnection {
         if (!this.inBuffer.isBound()) {
             this.inBuffer.bind(getSocketInputStream(socket));
         }
+        // 输出buffer 是否绑定了 socket的stream
         if (!this.outbuffer.isBound()) {
+            // 没有绑定 则进行绑定
             this.outbuffer.bind(getSocketOutputStream(socket));
         }
     }
@@ -169,7 +176,8 @@ public class BHttpConnectionBase implements HttpInetConnection {
     protected SessionOutputBuffer getSessionOutputBuffer() {
         return this.outbuffer;
     }
-
+    // flush操作
+    // 即把buffer中的消息写出
     protected void doFlush() throws IOException {
         this.outbuffer.flush();
     }
@@ -182,7 +190,7 @@ public class BHttpConnectionBase implements HttpInetConnection {
     protected Socket getSocket() {
         return this.socketHolder.get();
     }
-
+    // 创建输出流
     protected OutputStream createOutputStream(
             final long len,
             final SessionOutputBuffer outbuffer) {
@@ -196,10 +204,12 @@ public class BHttpConnectionBase implements HttpInetConnection {
     }
 
     protected OutputStream prepareOutput(final HttpMessage message) throws HttpException {
+        // 获取要 输出的消息的长度
         final long len = this.outgoingContentStrategy.determineLength(message);
+        // 即 其会把 len长度的数据 写到 outbuffer中
         return createOutputStream(len, this.outbuffer);
     }
-
+    // 创建一个输入流
     protected InputStream createInputStream(
             final long len,
             final SessionInputBuffer inBuffer) {
@@ -216,8 +226,9 @@ public class BHttpConnectionBase implements HttpInetConnection {
 
     protected HttpEntity prepareInput(final HttpMessage message) throws HttpException {
         final BasicHttpEntity entity = new BasicHttpEntity();
-
+        // 得到 长度
         final long len = this.incomingContentStrategy.determineLength(message);
+        // 创建输入流
         final InputStream inStream = createInputStream(len, this.inBuffer);
         if (len == ContentLengthStrategy.CHUNKED) {
             entity.setChunked(true);

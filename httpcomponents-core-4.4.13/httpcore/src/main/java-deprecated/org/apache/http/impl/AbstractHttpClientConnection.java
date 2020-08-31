@@ -96,7 +96,9 @@ public abstract class AbstractHttpClientConnection implements HttpClientConnecti
      */
     public AbstractHttpClientConnection() {
         super();
+        // 序列化器
         this.entityserializer = createEntitySerializer();
+        // 反序列化
         this.entitydeserializer = createEntityDeserializer();
     }
 
@@ -135,6 +137,7 @@ public abstract class AbstractHttpClientConnection implements HttpClientConnecti
      *
      * @return HTTP entity serialzier.
      */
+    // 序列化器
     protected EntitySerializer createEntitySerializer() {
         return new EntitySerializer(new StrictContentLengthStrategy());
     }

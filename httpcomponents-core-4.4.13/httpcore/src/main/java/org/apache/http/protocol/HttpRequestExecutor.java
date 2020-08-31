@@ -120,8 +120,10 @@ public class HttpRequestExecutor {
         Args.notNull(conn, "Client connection");
         Args.notNull(context, "HTTP context");
         try {
+            // 发送请求,并得到 响应结果
             HttpResponse response = doSendRequest(request, conn, context);
             if (response == null) {
+                // 如果上面没有得到响应体,这里会在此执行  直到得到响应体
                 response = doReceiveResponse(request, conn, context);
             }
             return response;
@@ -201,7 +203,8 @@ public class HttpRequestExecutor {
 
         context.setAttribute(HttpCoreContext.HTTP_CONNECTION, conn);
         context.setAttribute(HttpCoreContext.HTTP_REQ_SENT, Boolean.FALSE);
-
+        // 写请求头数据
+        // "GET /index.html HTTP/1.1"  以及  requestHeader 写入到buffer中
         conn.sendRequestHeader(request);
         if (request instanceof HttpEntityEnclosingRequest) {
             // Check for expect-continue handshake. We have to flush the
@@ -217,8 +220,11 @@ public class HttpRequestExecutor {
                 // As suggested by RFC 2616 section 8.2.3, we don't wait for a
                 // 100-continue response forever. On timeout, send the entity.
                 if (conn.isResponseAvailable(this.waitForContinue)) {
+                    // 解析响应信息
                     response = conn.receiveResponseHeader();
+                    // 是否有 请求体
                     if (canResponseHaveBody(request, response)) {
+                        // 解析请求体
                         conn.receiveResponseEntity(response);
                     }
                     final int status = response.getStatusLine().getStatusCode();
@@ -234,6 +240,7 @@ public class HttpRequestExecutor {
                     }
                 }
             }
+            // 发送请求体
             if (sendentity) {
                 conn.sendRequestEntity((HttpEntityEnclosingRequest) request);
             }

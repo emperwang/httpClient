@@ -111,14 +111,15 @@ public class PoolingHttpClientConnectionManager
     private final CPool pool;
     private final HttpClientConnectionOperator connectionOperator;
     private final AtomicBoolean isShutDown;
-
+    // 创建了一个默认的注册中心
+    // 其中包括了 http  和 https
     private static Registry<ConnectionSocketFactory> getDefaultRegistry() {
         return RegistryBuilder.<ConnectionSocketFactory>create()
                 .register("http", PlainConnectionSocketFactory.getSocketFactory())
                 .register("https", SSLConnectionSocketFactory.getSocketFactory())
                 .build();
     }
-
+    // 一般会以此为开始 创建连接池
     public PoolingHttpClientConnectionManager() {
         this(getDefaultRegistry());
     }
@@ -148,14 +149,19 @@ public class PoolingHttpClientConnectionManager
             final HttpConnectionFactory<HttpRoute, ManagedHttpClientConnection> connFactory) {
         this(getDefaultRegistry(), connFactory, null);
     }
-
+    // connFactory=null
+    // dnsResolver=null
     public PoolingHttpClientConnectionManager(
             final Registry<ConnectionSocketFactory> socketFactoryRegistry,
             final HttpConnectionFactory<HttpRoute, ManagedHttpClientConnection> connFactory,
             final DnsResolver dnsResolver) {
         this(socketFactoryRegistry, connFactory, null, dnsResolver, -1, TimeUnit.MILLISECONDS);
     }
-
+    // connFactory=null
+    // dnsResolver=null
+    // schemePortResolver=null
+    // timeToLive=-1
+    //
     public PoolingHttpClientConnectionManager(
             final Registry<ConnectionSocketFactory> socketFactoryRegistry,
             final HttpConnectionFactory<HttpRoute, ManagedHttpClientConnection> connFactory,
@@ -177,9 +183,12 @@ public class PoolingHttpClientConnectionManager
         final HttpConnectionFactory<HttpRoute, ManagedHttpClientConnection> connFactory,
         final long timeToLive, final TimeUnit timeUnit) {
         super();
+        // 记录配置数据
         this.configData = new ConfigData();
+        // 创建CPool
         this.pool = new CPool(new InternalConnectionFactory(
                 this.configData, connFactory), 2, 20, timeToLive, timeUnit);
+        // Inactivity 后多久进行一次 validate
         this.pool.setValidateAfterInactivity(2000);
         this.connectionOperator = Args.notNull(httpClientConnectionOperator, "HttpClientConnectionOperator");
         this.isShutDown = new AtomicBoolean(false);
@@ -257,7 +266,7 @@ public class PoolingHttpClientConnectionManager
         }
         return socketConfig;
     }
-
+    // 此state 是 http.user-token 的值
     @Override
     public ConnectionRequest requestConnection(
             final HttpRoute route,
@@ -267,6 +276,8 @@ public class PoolingHttpClientConnectionManager
             this.log.debug("Connection request: " + format(route, state) + formatStats(route));
         }
         Asserts.check(!this.isShutDown.get(), "Connection pool shut down");
+        // 如pool中租用一个 CPoolEntry,即一个连接
+        // 此租用返回一个 future
         final Future<CPoolEntry> future = this.pool.lease(route, state, null);
         return new ConnectionRequest() {
 
@@ -279,6 +290,7 @@ public class PoolingHttpClientConnectionManager
             public HttpClientConnection get(
                     final long timeout,
                     final TimeUnit timeUnit) throws InterruptedException, ExecutionException, ConnectionPoolTimeoutException {
+                // 获取连接
                 final HttpClientConnection conn = leaseConnection(future, timeout, timeUnit);
                 if (conn.isOpen()) {
                     final HttpHost host;
@@ -296,7 +308,7 @@ public class PoolingHttpClientConnectionManager
         };
 
     }
-
+    // 租用连接
     protected HttpClientConnection leaseConnection(
             final Future<CPoolEntry> future,
             final long timeout,
@@ -319,8 +331,8 @@ public class PoolingHttpClientConnectionManager
 
     @Override
     public void releaseConnection(
-            final HttpClientConnection managedConn,
-            final Object state,
+            final HttpClientConnection managedConn, // 连接
+            final Object state,     // 状态
             final long keepalive, final TimeUnit timeUnit) {
         Args.notNull(managedConn, "Managed connection");
         synchronized (managedConn) {
@@ -328,11 +340,14 @@ public class PoolingHttpClientConnectionManager
             if (entry == null) {
                 return;
             }
+            // 获取此entry的连接
             final ManagedHttpClientConnection conn = entry.getConnection();
             try {
                 if (conn.isOpen()) {
                     final TimeUnit effectiveUnit = timeUnit != null ? timeUnit : TimeUnit.MILLISECONDS;
+                    // 记录状态
                     entry.setState(state);
+                    // 更新过期时间
                     entry.updateExpiry(keepalive, effectiveUnit);
                     if (this.log.isDebugEnabled()) {
                         final String s;
@@ -343,9 +358,11 @@ public class PoolingHttpClientConnectionManager
                         }
                         this.log.debug("Connection " + format(entry) + " can be kept alive " + s);
                     }
+                    // 设置超时时间
                     conn.setSocketTimeout(0);
                 }
             } finally {
+                // 回收资源到 routePool中
                 this.pool.release(entry, conn.isOpen() && entry.isRouteComplete());
                 if (this.log.isDebugEnabled()) {
                     this.log.debug("Connection released: " + format(entry) + formatStats(entry.getRoute()));
@@ -566,7 +583,7 @@ public class PoolingHttpClientConnectionManager
         private final Map<HttpHost, ConnectionConfig> connectionConfigMap;
         private volatile SocketConfig defaultSocketConfig;
         private volatile ConnectionConfig defaultConnectionConfig;
-
+        // 这里创建了  两个容器
         ConfigData() {
             super();
             this.socketConfigMap = new ConcurrentHashMap<HttpHost, SocketConfig>();

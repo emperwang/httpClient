@@ -76,11 +76,13 @@ public class BackoffStrategyExec implements ClientExecChain {
         Args.notNull(context, "HTTP context");
         CloseableHttpResponse out = null;
         try {
+            // 请求执行
             out = this.requestExecutor.execute(route, request, context, execAware);
         } catch (final Exception ex) {
             if (out != null) {
                 out.close();
             }
+            // 判断是否需要 backoff
             if (this.connectionBackoffStrategy.shouldBackoff(ex)) {
                 this.backoffManager.backOff(route);
             }

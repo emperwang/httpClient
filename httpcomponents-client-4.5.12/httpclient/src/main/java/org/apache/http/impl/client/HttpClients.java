@@ -44,6 +44,7 @@ public class HttpClients {
      * Creates builder object for construction of custom
      * {@link CloseableHttpClient} instances.
      */
+    // 静态创建方法
     public static HttpClientBuilder custom() {
         return HttpClientBuilder.create();
     }

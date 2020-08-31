@@ -58,8 +58,9 @@ import org.apache.http.util.Args;
  */
 public class DefaultBHttpClientConnection extends BHttpConnectionBase
                                                    implements HttpClientConnection {
-
+    // 解析响应
     private final HttpMessageParser<HttpResponse> responseParser;
+    // 输出 request
     private final HttpMessageWriter<HttpRequest> requestWriter;
 
     /**
@@ -94,6 +95,7 @@ public class DefaultBHttpClientConnection extends BHttpConnectionBase
             final HttpMessageParserFactory<HttpResponse> responseParserFactory) {
         super(bufferSize, fragmentSizeHint, charDecoder, charEncoder,
                 constraints, incomingContentStrategy, outgoingContentStrategy);
+        // 此是吧 request写入到 buffer中
         this.requestWriter = (requestWriterFactory != null ? requestWriterFactory :
             DefaultHttpRequestWriterFactory.INSTANCE).create(getSessionOutputBuffer());
         this.responseParser = (responseParserFactory != null ? responseParserFactory :
@@ -137,9 +139,12 @@ public class DefaultBHttpClientConnection extends BHttpConnectionBase
     public void sendRequestHeader(final HttpRequest request)
             throws HttpException, IOException {
         Args.notNull(request, "HTTP request");
+        // 确认流已经打开了
         ensureOpen();
+        // 把request写入到 buffer中
         this.requestWriter.write(request);
         onRequestSubmitted(request);
+        // 增加 输出
         incrementRequestCount();
     }
 
@@ -148,18 +153,21 @@ public class DefaultBHttpClientConnection extends BHttpConnectionBase
             throws HttpException, IOException {
         Args.notNull(request, "HTTP request");
         ensureOpen();
+        // 获取请求体
         final HttpEntity entity = request.getEntity();
         if (entity == null) {
             return;
         }
         final OutputStream outStream = prepareOutput(request);
+        // 把entity 数据写入到  outStream中
         entity.writeTo(outStream);
         outStream.close();
     }
-
+    // 接收响应头
     @Override
     public HttpResponse receiveResponseHeader() throws HttpException, IOException {
         ensureOpen();
+        // 解析请求行  和  请求头信息
         final HttpResponse response = this.responseParser.parse();
         onResponseReceived(response);
         if (response.getStatusLine().getStatusCode() >= HttpStatus.SC_OK) {
@@ -173,10 +181,13 @@ public class DefaultBHttpClientConnection extends BHttpConnectionBase
             final HttpResponse response) throws HttpException, IOException {
         Args.notNull(response, "HTTP response");
         ensureOpen();
+        // 解析请求体
+        // 什么请求体只能解析一次? 因为请求是 直接使用的是 inputStream,当读取完成后,就直接关闭了,也就不能再进行读取了
         final HttpEntity entity = prepareInput(response);
+        // 记录 entity
         response.setEntity(entity);
     }
-
+    // 把缓存和 stream 进行flush 操作
     @Override
     public void flush() throws IOException {
         ensureOpen();

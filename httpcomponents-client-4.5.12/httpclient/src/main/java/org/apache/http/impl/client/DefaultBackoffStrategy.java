@@ -41,7 +41,7 @@ import org.apache.http.client.ConnectionBackoffStrategy;
  * @since 4.2
  */
 public class DefaultBackoffStrategy implements ConnectionBackoffStrategy {
-
+    // 是否需要 backOff
     @Override
     public boolean shouldBackoff(final Throwable t) {
         return t instanceof SocketTimeoutException || t instanceof ConnectException;

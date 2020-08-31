@@ -82,6 +82,7 @@ public class StrictContentLengthStrategy implements ContentLengthStrategy {
         // Although Transfer-Encoding is specified as a list, in practice
         // it is either missing or has the single value "chunked". So we
         // treat it as a single-valued header here.
+        // 获取 Transfer-Encoding , 根据其 encoding的类型来决定长度
         final Header transferEncodingHeader = message.getFirstHeader(HTTP.TRANSFER_ENCODING);
         if (transferEncodingHeader != null) {
             final String s = transferEncodingHeader.getValue();
@@ -99,6 +100,7 @@ public class StrictContentLengthStrategy implements ContentLengthStrategy {
                         "Unsupported transfer encoding: " + s);
             }
         }
+        // 查看是否有 Content-Length 这个请求头,其指出了 长度
         final Header contentLengthHeader = message.getFirstHeader(HTTP.CONTENT_LEN);
         if (contentLengthHeader != null) {
             final String s = contentLengthHeader.getValue();

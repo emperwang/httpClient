@@ -86,6 +86,7 @@ class InternalHttpClient extends CloseableHttpClient implements Configurable {
     private final Lookup<AuthSchemeProvider> authSchemeRegistry;
     private final CookieStore cookieStore;
     private final CredentialsProvider credentialsProvider;
+    // 默认配置
     private final RequestConfig defaultConfig;
     private final List<Closeable> closeables;
 
@@ -110,6 +111,7 @@ class InternalHttpClient extends CloseableHttpClient implements Configurable {
         this.authSchemeRegistry = authSchemeRegistry;
         this.cookieStore = cookieStore;
         this.credentialsProvider = credentialsProvider;
+        // 默认配置
         this.defaultConfig = defaultConfig;
         this.closeables = closeables;
     }
@@ -148,11 +150,11 @@ class InternalHttpClient extends CloseableHttpClient implements Configurable {
             context.setAttribute(HttpClientContext.REQUEST_CONFIG, this.defaultConfig);
         }
     }
-
+    // 真正执行请求方法的地方
     @Override
     protected CloseableHttpResponse doExecute(
-            final HttpHost target,
-            final HttpRequest request,
+            final HttpHost target,  // 目标主机
+            final HttpRequest request,  // 请求方法: delete  post  put
             final HttpContext context) throws IOException, ClientProtocolException {
         Args.notNull(request, "HTTP request");
         HttpExecutionAware execAware = null;
@@ -161,6 +163,7 @@ class InternalHttpClient extends CloseableHttpClient implements Configurable {
         }
         try {
             final HttpRequestWrapper wrapper = HttpRequestWrapper.wrap(request, target);
+            // 创建了 httpContext
             final HttpClientContext localcontext = HttpClientContext.adapt(
                     context != null ? context : new BasicHttpContext());
             RequestConfig config = null;
@@ -177,9 +180,11 @@ class InternalHttpClient extends CloseableHttpClient implements Configurable {
                     config = HttpClientParamConfig.getRequestConfig(params, this.defaultConfig);
                 }
             }
+            // 记录配置属性到 BasicHttpContext
             if (config != null) {
                 localcontext.setRequestConfig(config);
             }
+            // 配置默认的属性 到 BasicHttpContext
             setupContext(localcontext);
             final HttpRoute route = determineRoute(target, wrapper, localcontext);
             return this.execChain.execute(route, wrapper, localcontext, execAware);

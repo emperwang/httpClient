@@ -54,6 +54,7 @@ import org.apache.http.util.CharArrayBuffer;
 public class DefaultHttpRequestParser extends AbstractMessageParser<HttpRequest> {
 
     private final HttpRequestFactory requestFactory;
+    // 解析行之后的一个 缓存
     private final CharArrayBuffer lineBuf;
 
     /**
@@ -124,12 +125,14 @@ public class DefaultHttpRequestParser extends AbstractMessageParser<HttpRequest>
     protected HttpRequest parseHead(
             final SessionInputBuffer sessionBuffer)
         throws IOException, HttpException, ParseException {
-
+        //
         this.lineBuf.clear();
+        // 从socket中读取一行数据到  lineBuf中
         final int readLen = sessionBuffer.readLine(this.lineBuf);
         if (readLen == -1) {
             throw new ConnectionClosedException("Client closed connection");
         }
+        // 解析响应数据的 游标 cursor
         final ParserCursor cursor = new ParserCursor(0, this.lineBuf.length());
         final RequestLine requestline = this.lineParser.parseRequestLine(this.lineBuf, cursor);
         return this.requestFactory.newHttpRequest(requestline);

@@ -63,9 +63,10 @@ public class HttpGet extends HttpRequestBase {
      */
     public HttpGet(final String uri) {
         super();
+        // 设置uri
         setURI(URI.create(uri));
     }
-
+    // 请求方法
     @Override
     public String getMethod() {
         return METHOD_NAME;

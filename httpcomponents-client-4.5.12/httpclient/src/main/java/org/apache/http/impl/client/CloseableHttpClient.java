@@ -75,21 +75,24 @@ public abstract class CloseableHttpClient implements HttpClient, Closeable {
     /**
      * {@inheritDoc}
      */
+    // 请求的执行
     @Override
     public CloseableHttpResponse execute(
             final HttpUriRequest request,
             final HttpContext context) throws IOException, ClientProtocolException {
         Args.notNull(request, "HTTP request");
+        // 这里 determineTarget 得到了 host
         return doExecute(determineTarget(request), request, context);
     }
-
+    // 从request中获取 target host
     private static HttpHost determineTarget(final HttpUriRequest request) throws ClientProtocolException {
         // A null target may be acceptable if there is a default target.
         // Otherwise, the null target is detected in the director.
         HttpHost target = null;
-
+        // 获取 uri
         final URI requestURI = request.getURI();
         if (requestURI.isAbsolute()) {
+            // 根据uri 创建 HttpHost
             target = URIUtils.extractHost(requestURI);
             if (target == null) {
                 throw new ClientProtocolException("URI does not specify a valid host name: "
@@ -102,6 +105,7 @@ public abstract class CloseableHttpClient implements HttpClient, Closeable {
     /**
      * {@inheritDoc}
      */
+    // 请求的执行
     @Override
     public CloseableHttpResponse execute(
             final HttpUriRequest request) throws IOException, ClientProtocolException {

@@ -60,7 +60,9 @@ public class DefaultHttpRequestWriter extends AbstractMessageWriter<HttpRequest>
 
     @Override
     protected void writeHeadLine(final HttpRequest message) throws IOException {
+        // "GET /index.html HTTP/1.1" 写入到  lineBuf 中
         lineFormatter.formatRequestLine(this.lineBuf, message.getRequestLine());
+        // 把lineBuf中的数据 写入到 sessionBuffer中
         this.sessionBuffer.writeLine(this.lineBuf);
     }
 

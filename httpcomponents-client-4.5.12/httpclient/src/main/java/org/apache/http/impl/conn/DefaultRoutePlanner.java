@@ -57,10 +57,11 @@ public class DefaultRoutePlanner implements HttpRoutePlanner {
 
     public DefaultRoutePlanner(final SchemePortResolver schemePortResolver) {
         super();
+        // scheme 解析器
         this.schemePortResolver = schemePortResolver != null ? schemePortResolver :
             DefaultSchemePortResolver.INSTANCE;
     }
-
+    // 决定route
     @Override
     public HttpRoute determineRoute(
             final HttpHost host,
@@ -70,9 +71,13 @@ public class DefaultRoutePlanner implements HttpRoutePlanner {
         if (host == null) {
             throw new ProtocolException("Target host is not specified");
         }
+        // httpClient 上下文
         final HttpClientContext clientContext = HttpClientContext.adapt(context);
+        // requestConfig
         final RequestConfig config = clientContext.getRequestConfig();
+        // 本地地址
         final InetAddress local = config.getLocalAddress();
+        // 代理
         HttpHost proxy = config.getProxy();
         if (proxy == null) {
             proxy = determineProxy(host, request, context);
@@ -91,7 +96,9 @@ public class DefaultRoutePlanner implements HttpRoutePlanner {
         } else {
             target = host;
         }
+        // 是否是加密的
         final boolean secure = target.getSchemeName().equalsIgnoreCase("https");
+        // 创建route
         return proxy == null
                         ? new HttpRoute(target, local, secure)
                         : new HttpRoute(target, local, proxy, secure);

@@ -41,7 +41,8 @@ import org.apache.http.util.Args;
 public final class RegistryBuilder<I> {
 
     private final Map<String, I> items;
-
+    // 静态创建方法
+    // 创建 RegistryBuilder
     public static <I> RegistryBuilder<I> create() {
         return new RegistryBuilder<I>();
     }
@@ -50,14 +51,15 @@ public final class RegistryBuilder<I> {
         super();
         this.items = new HashMap<String, I>();
     }
-
+    // 注册动作
+    // 这里是吧注册的 根据名字放入到了 items中,即一个map中
     public RegistryBuilder<I> register(final String id, final I item) {
         Args.notEmpty(id, "ID");
         Args.notNull(item, "Item");
         items.put(id.toLowerCase(Locale.ROOT), item);
         return this;
     }
-
+    // 最后使用item为参数  创建了Registry
     public Registry<I> build() {
         return new Registry<I>(items);
     }

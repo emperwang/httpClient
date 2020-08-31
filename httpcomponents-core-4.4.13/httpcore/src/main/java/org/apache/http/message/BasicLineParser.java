@@ -283,6 +283,7 @@ public class BasicLineParser implements LineParser {
         final int indexTo = cursor.getUpperBound();
 
         try {
+            // 跳过 空白
             skipWhitespace(buffer, cursor);
             int i = cursor.getPos();
 
@@ -291,6 +292,7 @@ public class BasicLineParser implements LineParser {
                 throw new ParseException("Invalid request line: " +
                         buffer.substring(indexFrom, indexTo));
             }
+            // 获取请求方法
             final String method = buffer.substringTrimmed(i, blank);
             cursor.updatePos(blank);
 
@@ -302,9 +304,10 @@ public class BasicLineParser implements LineParser {
                 throw new ParseException("Invalid request line: " +
                         buffer.substring(indexFrom, indexTo));
             }
+            // 获取请求uri
             final String uri = buffer.substringTrimmed(i, blank);
             cursor.updatePos(blank);
-
+            // 获取请求版本
             final ProtocolVersion ver = parseProtocolVersion(buffer, cursor);
 
             skipWhitespace(buffer, cursor);
@@ -312,7 +315,7 @@ public class BasicLineParser implements LineParser {
                 throw new ParseException("Invalid request line: " +
                         buffer.substring(indexFrom, indexTo));
             }
-
+            // 记录 method  uri  version
             return createRequestLine(method, uri, ver);
         } catch (final IndexOutOfBoundsException e) {
             throw new ParseException("Invalid request line: " +

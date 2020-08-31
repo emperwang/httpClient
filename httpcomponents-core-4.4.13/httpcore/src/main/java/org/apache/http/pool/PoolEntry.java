@@ -80,10 +80,15 @@ public abstract class PoolEntry<T, C> {
         Args.notNull(conn, "Connection");
         Args.notNull(timeUnit, "Time unit");
         this.id = id;
+        // route
         this.route = route;
+        // 连接
         this.conn = conn;
+        // 创建时间
         this.created = System.currentTimeMillis();
         this.updated = this.created;
+        // 如果设置了过期时间,则过期时间为 this.created + timeUnit.toMillis(timeToLive)
+        // 否则为:  this.validityDeadline = Long.MAX_VALUE
         if (timeToLive > 0) {
             final long deadline = this.created + timeUnit.toMillis(timeToLive);
             // If the above overflows then default to Long.MAX_VALUE
@@ -91,6 +96,7 @@ public abstract class PoolEntry<T, C> {
         } else {
             this.validityDeadline = Long.MAX_VALUE;
         }
+        // 过期时间
         this.expiry = this.validityDeadline;
     }
 
@@ -163,7 +169,7 @@ public abstract class PoolEntry<T, C> {
         }
         this.expiry = Math.min(newExpiry, this.validityDeadline);
     }
-
+    // 判断连接是否已经过期
     public synchronized boolean isExpired(final long now) {
         return now >= this.expiry;
     }

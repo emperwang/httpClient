@@ -59,11 +59,12 @@ public class DefaultHttpRequestRetryHandler implements HttpRequestRetryHandler {
     public static final DefaultHttpRequestRetryHandler INSTANCE = new DefaultHttpRequestRetryHandler();
 
     /** the number of times a method will be retried */
+    // 重试次数
     private final int retryCount;
 
     /** Whether or not methods that have successfully sent their request will be retried */
     private final boolean requestSentRetryEnabled;
-
+    // 记录那些异常不进行重试
     private final Set<Class<? extends IOException>> nonRetriableClasses;
 
     /**
@@ -125,6 +126,7 @@ public class DefaultHttpRequestRetryHandler implements HttpRequestRetryHandler {
      * Used {@code retryCount} and {@code requestSentRetryEnabled} to determine
      * if the given method should be retried.
      */
+    // 决定是否进行重试
     @Override
     public boolean retryRequest(
             final IOException exception,
@@ -132,10 +134,12 @@ public class DefaultHttpRequestRetryHandler implements HttpRequestRetryHandler {
             final HttpContext context) {
         Args.notNull(exception, "Exception parameter");
         Args.notNull(context, "HTTP context");
+        // 如果重试次数 超过了,则不再进行重试
         if (executionCount > this.retryCount) {
             // Do not retry if over max retry count
             return false;
         }
+        // 抛出的异常是不进行重试的异常,则不再进行重试
         if (this.nonRetriableClasses.contains(exception.getClass())) {
             return false;
         }
@@ -144,18 +148,20 @@ public class DefaultHttpRequestRetryHandler implements HttpRequestRetryHandler {
                 return false;
             }
         }
+        // 获取client 上下文
         final HttpClientContext clientContext = HttpClientContext.adapt(context);
         final HttpRequest request = clientContext.getRequest();
-
+        //  request 被终止了,则也不再进行重试
         if(requestIsAborted(request)){
             return false;
         }
-
+        // 幂等 则重试
         if (handleAsIdempotent(request)) {
             // Retry if the request is considered idempotent
             return true;
         }
-
+        // 请求没有发出 或者  允许重新发送
+        // 则进行尝试
         if (!clientContext.isRequestSent() || this.requestSentRetryEnabled) {
             // Retry if the request has not been sent fully or
             // if it's OK to retry methods that have been sent

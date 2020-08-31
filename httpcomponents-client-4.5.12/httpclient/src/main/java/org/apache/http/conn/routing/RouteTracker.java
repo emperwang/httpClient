@@ -78,7 +78,9 @@ public final class RouteTracker implements RouteInfo, Cloneable {
      */
     public RouteTracker(final HttpHost target, final InetAddress local) {
         Args.notNull(target, "Target host");
+        // 目的主机
         this.targetHost   = target;
+        // 本地地址
         this.localAddress = local;
         this.tunnelled    = TunnelType.PLAIN;
         this.layered      = LayerType.PLAIN;

@@ -78,13 +78,16 @@ public class DefaultHttpClientConnectionOperator implements HttpClientConnection
             final DnsResolver dnsResolver) {
         super();
         Args.notNull(socketFactoryRegistry, "Socket factory registry");
+        // 记录注册器
         this.socketFactoryRegistry = socketFactoryRegistry;
+        // scheme解析器 , 也就是根据是 http 还是 https来判断
         this.schemePortResolver = schemePortResolver != null ? schemePortResolver :
             DefaultSchemePortResolver.INSTANCE;
+        // dns解析
         this.dnsResolver = dnsResolver != null ? dnsResolver :
             SystemDefaultDnsResolver.INSTANCE;
     }
-
+    // 获取 socketFactory的 registry
     @SuppressWarnings("unchecked")
     private Lookup<ConnectionSocketFactory> getSocketFactoryRegistry(final HttpContext context) {
         Lookup<ConnectionSocketFactory> reg = (Lookup<ConnectionSocketFactory>) context.getAttribute(
@@ -103,7 +106,9 @@ public class DefaultHttpClientConnectionOperator implements HttpClientConnection
             final int connectTimeout,
             final SocketConfig socketConfig,
             final HttpContext context) throws IOException {
+        // 获取socket factory
         final Lookup<ConnectionSocketFactory> registry = getSocketFactoryRegistry(context);
+        // 根据scheme是http 还是https来获取具体的socketfactory
         final ConnectionSocketFactory sf = registry.lookup(host.getSchemeName());
         if (sf == null) {
             throw new UnsupportedSchemeException(host.getSchemeName() +

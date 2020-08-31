@@ -71,6 +71,7 @@ public abstract class AbstractMessageWriter<T extends HttpMessage> implements Ht
         super();
         Args.notNull(buffer, "Session input buffer");
         this.sessionBuffer = buffer;
+        // 对每行请求头的一个缓存
         this.lineBuf = new CharArrayBuffer(128);
         this.lineFormatter = (formatter != null) ? formatter : BasicLineFormatter.INSTANCE;
     }
@@ -105,7 +106,9 @@ public abstract class AbstractMessageWriter<T extends HttpMessage> implements Ht
     @Override
     public void write(final T message) throws IOException, HttpException {
         Args.notNull(message, "HTTP message");
+        // 把"GET /index.html HTTP/1.1" 写入
         writeHeadLine(message);
+        // 请求 头 写入
         for (final HeaderIterator it = message.headerIterator(); it.hasNext(); ) {
             final Header header = it.nextHeader();
             this.sessionBuffer.writeLine

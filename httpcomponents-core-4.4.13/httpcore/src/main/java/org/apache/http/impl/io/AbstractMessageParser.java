@@ -87,7 +87,9 @@ public abstract class AbstractMessageParser<T extends HttpMessage> implements Ht
         Args.notNull(params, "HTTP parameters");
         this.sessionBuffer = buffer;
         this.messageConstraints = HttpParamConfig.getMessageConstraints(params);
+        // 行解析器
         this.lineParser = (parser != null) ? parser : BasicLineParser.INSTANCE;
+        // 存储响应头
         this.headerLines = new ArrayList<CharArrayBuffer>();
         this.state = HEAD_LINE;
     }
@@ -249,13 +251,14 @@ public abstract class AbstractMessageParser<T extends HttpMessage> implements Ht
      */
     protected abstract T parseHead(SessionInputBuffer sessionBuffer)
         throws IOException, HttpException, ParseException;
-
+    // 解析响应头
     @Override
     public T parse() throws IOException, HttpException {
         final int st = this.state;
         switch (st) {
         case HEAD_LINE:
             try {
+                // 解析请求行  得到  请求 method  uri  version
                 this.message = parseHead(this.sessionBuffer);
             } catch (final ParseException px) {
                 throw new ProtocolException(px.getMessage(), px);
@@ -263,6 +266,7 @@ public abstract class AbstractMessageParser<T extends HttpMessage> implements Ht
             this.state = HEADERS;
             //$FALL-THROUGH$
         case HEADERS:
+            // 解析请求头  http header
             final Header[] headers = AbstractMessageParser.parseHeaders(
                     this.sessionBuffer,
                     this.messageConstraints.getMaxHeaderCount(),

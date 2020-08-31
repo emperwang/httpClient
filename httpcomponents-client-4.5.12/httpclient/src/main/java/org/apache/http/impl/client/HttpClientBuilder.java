@@ -160,7 +160,9 @@ public class HttpClientBuilder {
     private HostnameVerifier hostnameVerifier;
     private LayeredConnectionSocketFactory sslSocketFactory;
     private SSLContext sslContext;
+    // 记录连接池
     private HttpClientConnectionManager connManager;
+    // connectionmanager 是否可以 share
     private boolean connManagerShared;
     private SchemePortResolver schemePortResolver;
     private ConnectionReuseStrategy reuseStrategy;
@@ -168,9 +170,10 @@ public class HttpClientBuilder {
     private AuthenticationStrategy targetAuthStrategy;
     private AuthenticationStrategy proxyAuthStrategy;
     private UserTokenHandler userTokenHandler;
+    // http处理器, 针对 cookie 等信息进行解析
     private HttpProcessor httpprocessor;
     private DnsResolver dnsResolver;
-
+    // request的拦截器
     private LinkedList<HttpRequestInterceptor> requestFirst;
     private LinkedList<HttpRequestInterceptor> requestLast;
     private LinkedList<HttpResponseInterceptor> responseFirst;
@@ -192,6 +195,7 @@ public class HttpClientBuilder {
     private Collection<? extends Header> defaultHeaders;
     private SocketConfig defaultSocketConfig;
     private ConnectionConfig defaultConnectionConfig;
+    // 记录 request的默认配置
     private RequestConfig defaultRequestConfig;
     private boolean evictExpiredConnections;
     private boolean evictIdleConnections;
@@ -216,7 +220,7 @@ public class HttpClientBuilder {
     private List<Closeable> closeables;
 
     private PublicSuffixMatcher publicSuffixMatcher;
-
+    // builder 类
     public static HttpClientBuilder create() {
         return new HttpClientBuilder();
     }
@@ -385,6 +389,7 @@ public class HttpClientBuilder {
     /**
      * Assigns {@link HttpClientConnectionManager} instance.
      */
+    // 设置连接池
     public final HttpClientBuilder setConnectionManager(
             final HttpClientConnectionManager connManager) {
         this.connManager = connManager;
@@ -768,6 +773,7 @@ public class HttpClientBuilder {
      * for request execution if not explicitly set in the client execution
      * context.
      */
+    // 设置 request的默认配置
     public final HttpClientBuilder setDefaultRequestConfig(final RequestConfig config) {
         this.defaultRequestConfig = config;
         return this;
@@ -940,7 +946,7 @@ public class HttpClientBuilder {
         }
         return s.split(" *, *");
     }
-
+    // 创建httpClient 实例
     public CloseableHttpClient build() {
         // Create main request executor
         // We copy the instance fields to avoid changing them, and rename to avoid accidental use of the wrong version
@@ -948,11 +954,12 @@ public class HttpClientBuilder {
         if (publicSuffixMatcherCopy == null) {
             publicSuffixMatcherCopy = PublicSuffixMatcherLoader.getDefault();
         }
-
+        // 执行器
         HttpRequestExecutor requestExecCopy = this.requestExec;
         if (requestExecCopy == null) {
             requestExecCopy = new HttpRequestExecutor();
         }
+        // 连接池
         HttpClientConnectionManager connManagerCopy = this.connManager;
         if (connManagerCopy == null) {
             LayeredConnectionSocketFactory sslSocketFactoryCopy = this.sslSocketFactory;
@@ -961,6 +968,7 @@ public class HttpClientBuilder {
                         System.getProperty("https.protocols")) : null;
                 final String[] supportedCipherSuites = systemProperties ? split(
                         System.getProperty("https.cipherSuites")) : null;
+                // 主机名校验
                 HostnameVerifier hostnameVerifierCopy = this.hostnameVerifier;
                 if (hostnameVerifierCopy == null) {
                     hostnameVerifierCopy = new DefaultHostnameVerifier(publicSuffixMatcherCopy);
@@ -1027,18 +1035,22 @@ public class HttpClientBuilder {
                 reuseStrategyCopy = DefaultClientConnectionReuseStrategy.INSTANCE;
             }
         }
+        // keepAlive的 策略
         ConnectionKeepAliveStrategy keepAliveStrategyCopy = this.keepAliveStrategy;
         if (keepAliveStrategyCopy == null) {
             keepAliveStrategyCopy = DefaultConnectionKeepAliveStrategy.INSTANCE;
         }
+        // 目标机器的认证的策略
         AuthenticationStrategy targetAuthStrategyCopy = this.targetAuthStrategy;
         if (targetAuthStrategyCopy == null) {
             targetAuthStrategyCopy = TargetAuthenticationStrategy.INSTANCE;
         }
+        // 代理机器的 认证策略
         AuthenticationStrategy proxyAuthStrategyCopy = this.proxyAuthStrategy;
         if (proxyAuthStrategyCopy == null) {
             proxyAuthStrategyCopy = ProxyAuthenticationStrategy.INSTANCE;
         }
+        //
         UserTokenHandler userTokenHandlerCopy = this.userTokenHandler;
         if (userTokenHandlerCopy == null) {
             if (!connectionStateDisabled) {
@@ -1053,12 +1065,13 @@ public class HttpClientBuilder {
             if (systemProperties) {
                 userAgentCopy = System.getProperty("http.agent");
             }
+            // agent的设置
             if (userAgentCopy == null && !defaultUserAgentDisabled) {
                 userAgentCopy = VersionInfo.getUserAgent("Apache-HttpClient",
                         "org.apache.http.client", getClass());
             }
         }
-
+        // 创建主要的执行链
         ClientExecChain execChain = createMainExec(
                 requestExecCopy,
                 connManagerCopy,
@@ -1068,23 +1081,26 @@ public class HttpClientBuilder {
                 targetAuthStrategyCopy,
                 proxyAuthStrategyCopy,
                 userTokenHandlerCopy);
-
+        // 装饰执行链
         execChain = decorateMainExec(execChain);
 
         HttpProcessor httpprocessorCopy = this.httpprocessor;
         if (httpprocessorCopy == null) {
 
             final HttpProcessorBuilder b = HttpProcessorBuilder.create();
+            // request的拦截器
             if (requestFirst != null) {
                 for (final HttpRequestInterceptor i: requestFirst) {
                     b.addFirst(i);
                 }
             }
+            // response的拦截器
             if (responseFirst != null) {
                 for (final HttpResponseInterceptor i: responseFirst) {
                     b.addFirst(i);
                 }
             }
+            // 添加各种拦截器
             b.addAll(
                     new RequestDefaultHeaders(defaultHeaders),
                     new RequestContent(),
@@ -1095,6 +1111,8 @@ public class HttpClientBuilder {
             if (!cookieManagementDisabled) {
                 b.add(new RequestAddCookies());
             }
+            // 允许的 压缩类型 拦截器
+            // 是否允许压缩
             if (!contentCompressionDisabled) {
                 if (contentDecoderMap != null) {
                     final List<String> encodings = new ArrayList<String>(contentDecoderMap.keySet());
@@ -1104,12 +1122,15 @@ public class HttpClientBuilder {
                     b.add(new RequestAcceptEncoding());
                 }
             }
+            //
             if (!authCachingDisabled) {
                 b.add(new RequestAuthCache());
             }
+            // cookie 管理
             if (!cookieManagementDisabled) {
                 b.add(new ResponseProcessCookies());
             }
+            // 响应的context 是否允许压缩
             if (!contentCompressionDisabled) {
                 if (contentDecoderMap != null) {
                     final RegistryBuilder<InputStreamFactory> b2 = RegistryBuilder.create();
@@ -1121,20 +1142,24 @@ public class HttpClientBuilder {
                     b.add(new ResponseContentEncoding());
                 }
             }
+            // request最后的一个 拦截器
             if (requestLast != null) {
                 for (final HttpRequestInterceptor i: requestLast) {
                     b.addLast(i);
                 }
             }
+            // response的最后一个拦截器
             if (responseLast != null) {
                 for (final HttpResponseInterceptor i: responseLast) {
                     b.addLast(i);
                 }
             }
+            // 根据 添加的拦截器 创建个月 processor
             httpprocessorCopy = b.build();
         }
+        // 对http 协议的处理
         execChain = new ProtocolExec(execChain, httpprocessorCopy);
-
+        // 装饰
         execChain = decorateProtocolExec(execChain);
 
         // Add request retry executor, if not disabled
@@ -1143,11 +1168,13 @@ public class HttpClientBuilder {
             if (retryHandlerCopy == null) {
                 retryHandlerCopy = DefaultHttpRequestRetryHandler.INSTANCE;
             }
+            // 重试机制
             execChain = new RetryExec(execChain, retryHandlerCopy);
         }
-
+        //
         HttpRoutePlanner routePlannerCopy = this.routePlanner;
         if (routePlannerCopy == null) {
+            // scheme对应的port的解析器
             SchemePortResolver schemePortResolverCopy = this.schemePortResolver;
             if (schemePortResolverCopy == null) {
                 schemePortResolverCopy = DefaultSchemePortResolver.INSTANCE;
@@ -1171,6 +1198,7 @@ public class HttpClientBuilder {
         // Add redirect executor, if not disabled
         if (!redirectHandlingDisabled) {
             RedirectStrategy redirectStrategyCopy = this.redirectStrategy;
+            // 重定向
             if (redirectStrategyCopy == null) {
                 redirectStrategyCopy = DefaultRedirectStrategy.INSTANCE;
             }
@@ -1178,6 +1206,7 @@ public class HttpClientBuilder {
         }
 
         // Optionally, add connection back-off executor
+        // connection backOff
         if (this.backoffManager != null && this.connectionBackoffStrategy != null) {
             execChain = new BackoffStrategyExec(execChain, this.connectionBackoffStrategy, this.backoffManager);
         }
@@ -1235,6 +1264,7 @@ public class HttpClientBuilder {
                     }
 
                 });
+                // 线程开始
                 connectionEvictor.start();
             }
             closeablesCopy.add(new Closeable() {
@@ -1246,7 +1276,7 @@ public class HttpClientBuilder {
 
             });
         }
-
+        // 创建了 InternalHttpClient
         return new InternalHttpClient(
                 execChain,
                 connManagerCopy,

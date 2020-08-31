@@ -47,9 +47,10 @@ public class DefaultHttpResponseWriterFactory implements HttpMessageWriterFactor
     public static final DefaultHttpResponseWriterFactory INSTANCE = new DefaultHttpResponseWriterFactory();
 
     private final LineFormatter lineFormatter;
-
+    // 如果没有指定的
     public DefaultHttpResponseWriterFactory(final LineFormatter lineFormatter) {
         super();
+        // 创建一个默认的  BasicLineFormatter 
         this.lineFormatter = lineFormatter != null ? lineFormatter : BasicLineFormatter.INSTANCE;
     }
 

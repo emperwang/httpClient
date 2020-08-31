@@ -63,6 +63,7 @@ public class RetryExec implements ClientExecChain {
     private final Log log = LogFactory.getLog(getClass());
 
     private final ClientExecChain requestExecutor;
+    // 重试的处理器
     private final HttpRequestRetryHandler retryHandler;
 
     public RetryExec(
@@ -73,7 +74,7 @@ public class RetryExec implements ClientExecChain {
         this.requestExecutor = requestExecutor;
         this.retryHandler = retryHandler;
     }
-
+    // 重试机制的 执行
     @Override
     public CloseableHttpResponse execute(
             final HttpRoute route,
@@ -86,12 +87,14 @@ public class RetryExec implements ClientExecChain {
         final Header[] origheaders = request.getAllHeaders();
         for (int execCount = 1;; execCount++) {
             try {
+                // 请求开始执行
                 return this.requestExecutor.execute(route, request, context, execAware);
             } catch (final IOException ex) {
                 if (execAware != null && execAware.isAborted()) {
                     this.log.debug("Request has been aborted");
                     throw ex;
                 }
+                // 判断是否进行重试
                 if (retryHandler.retryRequest(ex, execCount, context)) {
                     if (this.log.isInfoEnabled()) {
                         this.log.info("I/O exception ("+ ex.getClass().getName() +

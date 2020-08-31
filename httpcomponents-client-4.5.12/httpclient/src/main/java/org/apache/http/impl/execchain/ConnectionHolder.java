@@ -51,11 +51,15 @@ class ConnectionHolder implements ConnectionReleaseTrigger, Cancellable, Closeab
     private final Log log;
 
     private final HttpClientConnectionManager manager;
+    // 被管理的连接
     private final HttpClientConnection managedConn;
     private final AtomicBoolean released;
+    // 是否可以被 重用的标志
     private volatile boolean reusable;
     private volatile Object state;
+    // 此连接的超时时间
     private volatile long validDuration;
+    // 超时的单位
     private volatile TimeUnit timeUnit;
 
     public ConnectionHolder(
@@ -84,7 +88,7 @@ class ConnectionHolder implements ConnectionReleaseTrigger, Cancellable, Closeab
     public void setState(final Object state) {
         this.state = state;
     }
-
+    // 为连接设置  过期时间
     public void setValidFor(final long duration, final TimeUnit timeUnit) {
         synchronized (this.managedConn) {
             this.validDuration = duration;
@@ -95,6 +99,7 @@ class ConnectionHolder implements ConnectionReleaseTrigger, Cancellable, Closeab
     private void releaseConnection(final boolean reusable) {
         if (this.released.compareAndSet(false, true)) {
             synchronized (this.managedConn) {
+                // 如果可重用,则回收到 pool中
                 if (reusable) {
                     this.manager.releaseConnection(this.managedConn,
                             this.state, this.validDuration, this.timeUnit);

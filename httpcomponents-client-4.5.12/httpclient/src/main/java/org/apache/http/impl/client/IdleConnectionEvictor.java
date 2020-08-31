@@ -54,10 +54,13 @@ public final class IdleConnectionEvictor {
             final ThreadFactory threadFactory,
             final long sleepTime, final TimeUnit sleepTimeUnit,
             final long maxIdleTime, final TimeUnit maxIdleTimeUnit) {
+        // pool
         this.connectionManager = Args.notNull(connectionManager, "Connection manager");
+        // 线程工厂
         this.threadFactory = threadFactory != null ? threadFactory : new DefaultThreadFactory();
         this.sleepTimeMs = sleepTimeUnit != null ? sleepTimeUnit.toMillis(sleepTime) : sleepTime;
         this.maxIdleTimeMs = maxIdleTimeUnit != null ? maxIdleTimeUnit.toMillis(maxIdleTime) : maxIdleTime;
+        // 创建一个线程,来关闭过期 和 idle 超时的连接
         this.thread = this.threadFactory.newThread(new Runnable() {
             @Override
             public void run() {

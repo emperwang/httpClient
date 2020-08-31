@@ -43,7 +43,7 @@ import org.apache.http.protocol.HttpContext;
  */
 @Contract(threading = ThreadingBehavior.IMMUTABLE)
 public class PlainConnectionSocketFactory implements ConnectionSocketFactory {
-
+    // 饿汉式   单例
     public static final PlainConnectionSocketFactory INSTANCE = new PlainConnectionSocketFactory();
 
     public static PlainConnectionSocketFactory getSocketFactory() {
@@ -53,12 +53,12 @@ public class PlainConnectionSocketFactory implements ConnectionSocketFactory {
     public PlainConnectionSocketFactory() {
         super();
     }
-
+    // 创建 scoket
     @Override
     public Socket createSocket(final HttpContext context) throws IOException {
         return new Socket();
     }
-
+    // socket 连接
     @Override
     public Socket connectSocket(
             final int connectTimeout,

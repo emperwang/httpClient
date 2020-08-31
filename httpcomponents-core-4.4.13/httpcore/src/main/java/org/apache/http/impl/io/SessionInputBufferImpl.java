@@ -64,7 +64,7 @@ public class SessionInputBufferImpl implements SessionInputBuffer, BufferInfo {
     private final int minChunkLimit;
     private final MessageConstraints constraints;
     private final CharsetDecoder decoder;
-
+    // 输入流
     private InputStream inStream;
     private int bufferPos;
     private int bufferLen;
@@ -94,6 +94,7 @@ public class SessionInputBufferImpl implements SessionInputBuffer, BufferInfo {
         Args.notNull(metrics, "HTTP transport metrcis");
         Args.positive(bufferSize, "Buffer size");
         this.metrics = metrics;
+        // 缓存数据
         this.buffer = new byte[bufferSize];
         this.bufferPos = 0;
         this.bufferLen = 0;
@@ -131,14 +132,15 @@ public class SessionInputBufferImpl implements SessionInputBuffer, BufferInfo {
     public int available() {
         return capacity() - length();
     }
-
+    // 从输入流中读取数据
     private int streamRead(final byte[] b, final int off, final int len) throws IOException {
         Asserts.notNull(this.inStream, "Input stream");
         return this.inStream.read(b, off, len);
     }
-
+    // 填充buffer,即从 输入流中读取数据
     public int fillBuffer() throws IOException {
         // compact the buffer if necessary
+        // 如果后缓存数据,则compact buffer
         if (this.bufferPos > 0) {
             final int len = this.bufferLen - this.bufferPos;
             if (len > 0) {
@@ -150,12 +152,14 @@ public class SessionInputBufferImpl implements SessionInputBuffer, BufferInfo {
         final int readLen;
         final int off = this.bufferLen;
         final int len = this.buffer.length - off;
+        // 从输入流中读取数据到 buffer中
         readLen = streamRead(this.buffer, off, len);
         if (readLen == -1) {
             return -1;
         }
         this.bufferLen = off + readLen;
         this.metrics.incrementBytesTransferred(readLen);
+        // 返回读取的数据
         return readLen;
     }
 
@@ -236,22 +240,28 @@ public class SessionInputBufferImpl implements SessionInputBuffer, BufferInfo {
      * @return     one line of characters
      * @throws  IOException  if an I/O error occurs.
      */
+    // 从输入流中读取数据
+    // charbuffer 存储读取到的数据
     @Override
     public int readLine(final CharArrayBuffer charbuffer) throws IOException {
         Args.notNull(charbuffer, "Char array buffer");
+        // 获取最大的行长度
         final int maxLineLen = this.constraints.getMaxLineLength();
         int noRead = 0;
         boolean retry = true;
+        // 此处的 while(retry) 即 读取一行的数据,即读取到 HTTP.LF 表示读取到一行
         while (retry) {
             // attempt to find end of line (LF)
             int pos = -1;
+            // 查看是否读取到了一行
             for (int i = this.bufferPos; i < this.bufferLen; i++) {
                 if (this.buffer[i] == HTTP.LF) {
+                    // 此pos记录 读取到的数据中  LF的位置,即pos之前的数据为一行
                     pos = i;
                     break;
                 }
             }
-
+            // 查看当前读取到的长度  是否大于了一行最大长度
             if (maxLineLen > 0) {
                 final int currentLen = this.lineBuffer.length()
                         + (pos >= 0 ? pos : this.bufferLen) - this.bufferPos;
@@ -259,11 +269,14 @@ public class SessionInputBufferImpl implements SessionInputBuffer, BufferInfo {
                     throw new MessageConstraintException("Maximum line length limit exceeded");
                 }
             }
-
+            // this.buffer 是缓存从inputStream中读取的数据
+            // this.lineBuffer 数缓存一行的数据,数据来源于 this.buffer
             if (pos != -1) {
                 // end of line found.
+                // pos不为-1,但是lineBuffer为空 说明读取到了一行
                 if (this.lineBuffer.isEmpty()) {
                     // the entire line is preset in the read buffer
+                    // 把读取到的 一行数据 追加到  read buffer中
                     return lineFromReadBuffer(charbuffer, pos);
                 }
                 retry = false;
@@ -277,7 +290,9 @@ public class SessionInputBufferImpl implements SessionInputBuffer, BufferInfo {
                     this.lineBuffer.append(this.buffer, this.bufferPos, len);
                     this.bufferPos = this.bufferLen;
                 }
+                // 从输入流中读取数据
                 noRead = fillBuffer();
+                // 如果没有读到数据,则设置 retry为false
                 if (noRead == -1) {
                     retry = false;
                 }
@@ -306,6 +321,7 @@ public class SessionInputBufferImpl implements SessionInputBuffer, BufferInfo {
     private int lineFromLineBuffer(final CharArrayBuffer charbuffer)
             throws IOException {
         // discard LF if found
+        // lineBuffer的长度
         int len = this.lineBuffer.length();
         if (len > 0) {
             if (this.lineBuffer.byteAt(len - 1) == HTTP.LF) {
@@ -331,6 +347,7 @@ public class SessionInputBufferImpl implements SessionInputBuffer, BufferInfo {
     private int lineFromReadBuffer(final CharArrayBuffer charbuffer, final int position)
             throws IOException {
         int pos = position;
+        // buffer的当前位置
         final int off = this.bufferPos;
         int len;
         this.bufferPos = pos + 1;
@@ -339,15 +356,17 @@ public class SessionInputBufferImpl implements SessionInputBuffer, BufferInfo {
             pos--;
         }
         len = pos - off;
+        // 如果没有解码器,则直接追加数据
         if (this.decoder == null) {
             charbuffer.append(this.buffer, off, len);
         } else {
+            // 如果有解码器,则解码后,再追加
             final ByteBuffer bbuf =  ByteBuffer.wrap(this.buffer, off, len);
             len = appendDecoded(charbuffer, bbuf);
         }
         return len;
     }
-
+    // 把读取到的数据 解码,并追加到 charbuffer中
     private int appendDecoded(
             final CharArrayBuffer charbuffer, final ByteBuffer bbuf) throws IOException {
         if (!bbuf.hasRemaining()) {

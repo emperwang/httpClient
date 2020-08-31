@@ -59,7 +59,7 @@ public class ManagedHttpClientConnectionFactory
         implements HttpConnectionFactory<HttpRoute, ManagedHttpClientConnection> {
 
     private static final AtomicLong COUNTER = new AtomicLong();
-
+    // 饿汉式
     public static final ManagedHttpClientConnectionFactory INSTANCE = new ManagedHttpClientConnectionFactory();
 
     private final Log log = LogFactory.getLog(DefaultManagedHttpClientConnection.class);

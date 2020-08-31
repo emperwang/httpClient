@@ -72,8 +72,10 @@ public final class HttpRoute implements RouteInfo, Cloneable {
     private HttpRoute(final HttpHost target, final InetAddress local, final List<HttpHost> proxies,
                      final boolean secure, final TunnelType tunnelled, final LayerType layered) {
         Args.notNull(target, "Target host");
+        // 目标host
         this.targetHost = normalize(target);
         this.localAddress = local;
+        // 代理
         if (proxies != null && !proxies.isEmpty()) {
             this.proxyChain = new ArrayList<HttpHost>(proxies);
         } else {
@@ -82,6 +84,7 @@ public final class HttpRoute implements RouteInfo, Cloneable {
         if (tunnelled == TunnelType.TUNNELLED) {
             Args.check(this.proxyChain != null, "Proxy required if tunnelled");
         }
+        // 是否是加密
         this.secure       = secure;
         this.tunnelled    = tunnelled != null ? tunnelled : TunnelType.PLAIN;
         this.layered      = layered != null ? layered : LayerType.PLAIN;

@@ -82,7 +82,9 @@ public class ProtocolExec implements ClientExecChain {
     public ProtocolExec(final ClientExecChain requestExecutor, final HttpProcessor httpProcessor) {
         Args.notNull(requestExecutor, "HTTP client request executor");
         Args.notNull(httpProcessor, "HTTP protocol processor");
+        // 请求的执行器
         this.requestExecutor = requestExecutor;
+        // 记录了 各种 拦截器
         this.httpProcessor = httpProcessor;
     }
 
@@ -99,7 +101,8 @@ public class ProtocolExec implements ClientExecChain {
             }
         }
     }
-
+    // http 协议处理
+    // 此处理器包含了许多的 拦截器,各个拦截器对http协议进行处理
     @Override
     public CloseableHttpResponse execute(
             final HttpRoute route,
@@ -131,7 +134,7 @@ public class ProtocolExec implements ClientExecChain {
 
         // Re-write request URI if needed
         rewriteRequestURI(request, route, context.getRequestConfig().isNormalizeUri());
-
+        // 请求参数
         final HttpParams params = request.getParams();
         HttpHost virtualHost = (HttpHost) params.getParameter(ClientPNames.VIRTUAL_HOST);
         // HTTPCLIENT-1092 - add the port if necessary
@@ -180,14 +183,16 @@ public class ProtocolExec implements ClientExecChain {
         context.setAttribute(HttpCoreContext.HTTP_TARGET_HOST, target);
         context.setAttribute(HttpClientContext.HTTP_ROUTE, route);
         context.setAttribute(HttpCoreContext.HTTP_REQUEST, request);
-
+        // 对request 进行拦截
+        // 调用各个 request 拦截器
         this.httpProcessor.process(request, context);
-
+        // 请求执行
         final CloseableHttpResponse response = this.requestExecutor.execute(route, request,
             context, execAware);
         try {
             // Run response protocol interceptors
             context.setAttribute(HttpCoreContext.HTTP_RESPONSE, response);
+            // 对response 执行 返回拦截器
             this.httpProcessor.process(response, context);
             return response;
         } catch (final RuntimeException ex) {

@@ -167,8 +167,9 @@ public class BasicLineFormatter implements LineFormatter {
                                              final RequestLine reqline) {
         Args.notNull(reqline, "Request line");
         final CharArrayBuffer result = initBuffer(buffer);
+        // 把"GET /index.html HTTP/1.1"写入到缓存中  result中
         doFormatRequestLine(result, reqline);
-
+        // 返回结果
         return result;
     }
 
@@ -183,14 +184,17 @@ public class BasicLineFormatter implements LineFormatter {
      */
     protected void doFormatRequestLine(final CharArrayBuffer buffer,
                                        final RequestLine reqline) {
+        // 获取请求方法
         final String method = reqline.getMethod();
+        // 获取 uri
         final String uri    = reqline.getUri();
 
         // room for "GET /index.html HTTP/1.1"
         final int len = method.length() + 1 + uri.length() + 1 +
             estimateProtocolVersionLen(reqline.getProtocolVersion());
+        // 保证缓存的长度是可以的
         buffer.ensureCapacity(len);
-
+        // 追加数据进入
         buffer.append(method);
         buffer.append(' ');
         buffer.append(uri);

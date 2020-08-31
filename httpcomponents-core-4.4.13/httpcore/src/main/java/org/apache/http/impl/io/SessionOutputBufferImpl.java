@@ -56,12 +56,15 @@ import org.apache.http.util.CharArrayBuffer;
 public class SessionOutputBufferImpl implements SessionOutputBuffer, BufferInfo {
 
     private static final byte[] CRLF = new byte[] {HTTP.CR, HTTP.LF};
-
+    // metrics
     private final HttpTransportMetricsImpl metrics;
+    // 缓冲区
     private final ByteArrayBuffer buffer;
+    // 片段大小
     private final int fragementSizeHint;
+    // 编码
     private final CharsetEncoder encoder;
-
+    // socket 输出流
     private OutputStream outStream;
     private ByteBuffer bbuf;
 
@@ -118,7 +121,7 @@ public class SessionOutputBufferImpl implements SessionOutputBuffer, BufferInfo 
     public int available() {
         return capacity() - length();
     }
-
+    // 把buffer中的消息写出去
     private void streamWrite(final byte[] b, final int off, final int len) throws IOException {
         Asserts.notNull(outStream, "Output stream");
         this.outStream.write(b, off, len);
@@ -129,7 +132,7 @@ public class SessionOutputBufferImpl implements SessionOutputBuffer, BufferInfo 
             this.outStream.flush();
         }
     }
-
+    // flushBuffer 即把buffer中的信息 写出
     private void flushBuffer() throws IOException {
         final int len = this.buffer.length();
         if (len > 0) {
@@ -138,10 +141,12 @@ public class SessionOutputBufferImpl implements SessionOutputBuffer, BufferInfo 
             this.metrics.incrementBytesTransferred(len);
         }
     }
-
+    // flush 操作
     @Override
     public void flush() throws IOException {
+        // 把buffer中的消息写出
         flushBuffer();
+        // 对stream进行flush
         flushStream();
     }
 
@@ -170,7 +175,7 @@ public class SessionOutputBufferImpl implements SessionOutputBuffer, BufferInfo 
             this.buffer.append(b, off, len);
         }
     }
-
+    // 写出数据
     @Override
     public void write(final byte[] b) throws IOException {
         if (b == null) {
@@ -185,8 +190,10 @@ public class SessionOutputBufferImpl implements SessionOutputBuffer, BufferInfo 
             if (this.buffer.isFull()) {
                 flushBuffer();
             }
+            // 追加到   buffer中
             this.buffer.append(b);
         } else {
+            // 如果不允许片段, 那就直接从流中写出
             flushBuffer();
             this.outStream.write(b);
         }
@@ -201,6 +208,7 @@ public class SessionOutputBufferImpl implements SessionOutputBuffer, BufferInfo 
      * @param      s   the line.
      * @throws  IOException  if an I/O error occurs.
      */
+    // 按行写出到 stream中
     @Override
     public void writeLine(final String s) throws IOException {
         if (s == null) {
@@ -228,14 +236,18 @@ public class SessionOutputBufferImpl implements SessionOutputBuffer, BufferInfo 
      * @param      charbuffer the buffer containing chars of the line.
      * @throws  IOException  if an I/O error occurs.
      */
+    // 此在写http 的请求头时调用.即把请求头信息写入到buffer中
     @Override
     public void writeLine(final CharArrayBuffer charbuffer) throws IOException {
         if (charbuffer == null) {
             return;
         }
+        // 如果没有 编码
+        // 则直接写入
         if (this.encoder == null) {
             int off = 0;
             int remaining = charbuffer.length();
+            // 把输出写入到 buffer中
             while (remaining > 0) {
                 int chunk = this.buffer.capacity() - this.buffer.length();
                 chunk = Math.min(chunk, remaining);
@@ -249,22 +261,29 @@ public class SessionOutputBufferImpl implements SessionOutputBuffer, BufferInfo 
                 remaining -= chunk;
             }
         } else {
+            // 如果有编码,则使用编码写入
+            // charBuffer 使用
             final CharBuffer cbuf = CharBuffer.wrap(charbuffer.buffer(), 0, charbuffer.length());
             writeEncoded(cbuf);
         }
+        // 写入换行符
         write(CRLF);
     }
-
+    // 先编码 在写入到到缓存
     private void writeEncoded(final CharBuffer cbuf) throws IOException {
         if (!cbuf.hasRemaining()) {
             return;
         }
+        // 中间缓存区,用于存储编码的信息
         if (this.bbuf == null) {
             this.bbuf = ByteBuffer.allocate(1024);
         }
+        // 编码重置
         this.encoder.reset();
         while (cbuf.hasRemaining()) {
+            // 对要写入的信息 进行 编码
             final CoderResult result = this.encoder.encode(cbuf, this.bbuf, true);
+            // 处理编码后的信息
             handleEncodingResult(result);
         }
         final CoderResult result = this.encoder.flush(this.bbuf);
@@ -273,11 +292,14 @@ public class SessionOutputBufferImpl implements SessionOutputBuffer, BufferInfo 
     }
 
     private void handleEncodingResult(final CoderResult result) throws IOException {
+        // 如果有错误,则抛出错误
         if (result.isError()) {
             result.throwException();
         }
+        // 准备读 bbuf中的信息
         this.bbuf.flip();
         while (this.bbuf.hasRemaining()) {
+            // 把bbuf中的信息 写到 buffer中
             write(this.bbuf.get());
         }
         this.bbuf.compact();

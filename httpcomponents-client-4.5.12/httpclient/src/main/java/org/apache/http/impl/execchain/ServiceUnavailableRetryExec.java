@@ -70,7 +70,9 @@ public class ServiceUnavailableRetryExec implements ClientExecChain {
         super();
         Args.notNull(requestExecutor, "HTTP request executor");
         Args.notNull(retryStrategy, "Retry strategy");
+        // 执行器
         this.requestExecutor = requestExecutor;
+        // 重试机制
         this.retryStrategy = retryStrategy;
     }
 

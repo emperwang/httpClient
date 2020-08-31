@@ -84,6 +84,7 @@ public class EntitySerializer {
      * @throws HttpException in case of HTTP protocol violation.
      * @throws IOException in case of an I/O error.
      */
+    // 序列化
     protected OutputStream doSerialize(
             final SessionOutputBuffer outbuffer,
             final HttpMessage message) throws HttpException, IOException {
