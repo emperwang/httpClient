@@ -56,7 +56,7 @@ public abstract class PoolEntry<T, C> {
     private final C conn;
     private final long created;
     private final long validityDeadline;
-
+    // 更新时间
     private long updated;
 
     private long expiry;
@@ -86,17 +86,22 @@ public abstract class PoolEntry<T, C> {
         this.conn = conn;
         // 创建时间
         this.created = System.currentTimeMillis();
+        // 第一个的更新时间 就是 创建的时间
         this.updated = this.created;
         // 如果设置了过期时间,则过期时间为 this.created + timeUnit.toMillis(timeToLive)
         // 否则为:  this.validityDeadline = Long.MAX_VALUE
+        // 此处的ttl 就是在连接池中 设置的 ttl
         if (timeToLive > 0) {
+            // deadline时间 就是 创建时间加上 ttl 时间
             final long deadline = this.created + timeUnit.toMillis(timeToLive);
             // If the above overflows then default to Long.MAX_VALUE
+            // 如果dealine 时间小于0, 那么就设置  validityDeadline时间为 Long.MAX_VALUE
             this.validityDeadline = deadline > 0 ? deadline : Long.MAX_VALUE;
         } else {
+            // 默认的 有效deadline 就是 Long.MAX_VALUE
             this.validityDeadline = Long.MAX_VALUE;
         }
-        // 过期时间
+        // 过期时间 就是 validityDeadline
         this.expiry = this.validityDeadline;
     }
 
@@ -157,20 +162,25 @@ public abstract class PoolEntry<T, C> {
     public synchronized long getExpiry() {
         return this.expiry;
     }
-
+    // 更新过期时间
     public synchronized void updateExpiry(final long time, final TimeUnit timeUnit) {
         Args.notNull(timeUnit, "Time unit");
+        // update 为当前系统时间
         this.updated = System.currentTimeMillis();
         final long newExpiry;
         if (time > 0) {
+            // 更新 过期时间
             newExpiry = this.updated + timeUnit.toMillis(time);
         } else {
+            // 否则过期时间为 Long.MAX_VALUE
             newExpiry = Long.MAX_VALUE;
         }
+        // 选择新的 newExpiry 和  validityDeadline 中的较小值
         this.expiry = Math.min(newExpiry, this.validityDeadline);
     }
     // 判断连接是否已经过期
     public synchronized boolean isExpired(final long now) {
+        // 当前时间 大于 过期时间, 则表示已经 过期
         return now >= this.expiry;
     }
 

@@ -83,11 +83,15 @@ public class DefaultConnectionReuseStrategy implements ConnectionReuseStrategy {
         // If a HTTP 204 No Content response contains a Content-length with value > 0 or Transfer-Encoding,
         // don't reuse the connection. This is to avoid getting out-of-sync if a misbehaved HTTP server
         // returns content as part of a HTTP 204 response.
+        // 如果响应码是 204
         if (response.getStatusLine().getStatusCode() == HttpStatus.SC_NO_CONTENT) {
+            // 获取 Content-Length 请求头
             final Header clh = response.getFirstHeader(HTTP.CONTENT_LEN);
             if (clh != null) {
                 try {
+                    // 解析 Content-Length 的值
                     final int contentLen = Integer.parseInt(clh.getValue());
+                    // 1. 如果有值,则此 连接不可重用
                     if (contentLen > 0) {
                         return false;
                     }
@@ -95,7 +99,7 @@ public class DefaultConnectionReuseStrategy implements ConnectionReuseStrategy {
                     // fall through
                 }
             }
-
+            //2. 如果有Transfer-Encoding  请求头,则此连接不可重用
             final Header teh = response.getFirstHeader(HTTP.TRANSFER_ENCODING);
             if (teh != null) {
                 return false;
@@ -107,6 +111,7 @@ public class DefaultConnectionReuseStrategy implements ConnectionReuseStrategy {
             try {
                 final TokenIterator ti = new BasicTokenIterator(request.headerIterator(HttpHeaders.CONNECTION));
                 while (ti.hasNext()) {
+                    // 3. Connection 是close,则不进行重用
                     final String token = ti.nextToken();
                     if (HTTP.CONN_CLOSE.equalsIgnoreCase(token)) {
                         return false;
@@ -120,13 +125,16 @@ public class DefaultConnectionReuseStrategy implements ConnectionReuseStrategy {
 
         // Check for a self-terminating entity. If the end of the entity will
         // be indicated by closing the connection, there is no keep-alive.
+        // 获取协议版本
         final ProtocolVersion ver = response.getStatusLine().getProtocolVersion();
         final Header teh = response.getFirstHeader(HTTP.TRANSFER_ENCODING);
         if (teh != null) {
+            // 4. 请求头Transfer-Encoding= chunked则不重用
             if (!HTTP.CHUNK_CODING.equalsIgnoreCase(teh.getValue())) {
                 return false;
             }
         } else {
+            // 5. 有响应体的 不重用
             if (canResponseHaveBody(request, response)) {
                 final Header[] clhs = response.getHeaders(HTTP.CONTENT_LEN);
                 // Do not reuse if not properly content-length delimited
@@ -183,8 +191,10 @@ public class DefaultConnectionReuseStrategy implements ConnectionReuseStrategy {
                 boolean keepalive = false;
                 while (ti.hasNext()) {
                     final String token = ti.nextToken();
+                    // 6. Connection 为close 不重用
                     if (HTTP.CONN_CLOSE.equalsIgnoreCase(token)) {
                         return false;
+                        // 7. Connection 为 Keep-Alive  重用
                     } else if (HTTP.CONN_KEEP_ALIVE.equalsIgnoreCase(token)) {
                         // continue the loop, there may be a "close" afterwards
                         keepalive = true;
@@ -202,6 +212,7 @@ public class DefaultConnectionReuseStrategy implements ConnectionReuseStrategy {
         }
 
         // default since HTTP/1.1 is persistent, before it was non-persistent
+        // 8. 版本号小于 1.0  不重用
         return !ver.lessEquals(HttpVersion.HTTP_1_0);
     }
 

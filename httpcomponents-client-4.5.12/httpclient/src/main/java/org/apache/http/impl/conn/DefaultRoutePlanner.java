@@ -61,7 +61,7 @@ public class DefaultRoutePlanner implements HttpRoutePlanner {
         this.schemePortResolver = schemePortResolver != null ? schemePortResolver :
             DefaultSchemePortResolver.INSTANCE;
     }
-    // 决定route
+    // 解析route信息
     @Override
     public HttpRoute determineRoute(
             final HttpHost host,

@@ -54,10 +54,11 @@ import org.apache.http.protocol.HttpContext;
  */
 public class DefaultManagedHttpClientConnection extends DefaultBHttpClientConnection
                                  implements ManagedHttpClientConnection, HttpContext {
-
+    // 记录id号
     private final String id;
+    // 记录属性
     private final Map<String, Object> attributes;
-
+    // 是否关闭
     private volatile boolean shutdown;
 
     public DefaultManagedHttpClientConnection(
@@ -74,7 +75,9 @@ public class DefaultManagedHttpClientConnection extends DefaultBHttpClientConnec
         super(bufferSize, fragmentSizeHint, charDecoder, charEncoder,
                 constraints, incomingContentStrategy, outgoingContentStrategy,
                 requestWriterFactory, responseParserFactory);
+        // 记录自己的id
         this.id = id;
+        // 记录属性
         this.attributes = new ConcurrentHashMap<String, Object>();
     }
 

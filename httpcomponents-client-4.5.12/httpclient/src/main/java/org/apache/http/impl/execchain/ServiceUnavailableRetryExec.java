@@ -75,33 +75,42 @@ public class ServiceUnavailableRetryExec implements ClientExecChain {
         // 重试机制
         this.retryStrategy = retryStrategy;
     }
-
+    //  Service Unavailable 503 的处理
     @Override
     public CloseableHttpResponse execute(
             final HttpRoute route,
             final HttpRequestWrapper request,
             final HttpClientContext context,
             final HttpExecutionAware execAware) throws IOException, HttpException {
+        // 获取各种请求头
         final Header[] origheaders = request.getAllHeaders();
+        // for 循环持续进行重试
         for (int c = 1;; c++) {
+            // 请求开始执行
             final CloseableHttpResponse response = this.requestExecutor.execute(
                     route, request, context, execAware);
             try {
+                // 判断是否重试
                 if (this.retryStrategy.retryRequest(response, c, context)
                         && RequestEntityProxy.isRepeatable(request)) {
+                    // 如果进行重试,则关闭前一个 response
                     response.close();
+                    // 获取两次重试间隔
                     final long nextInterval = this.retryStrategy.getRetryInterval();
                     if (nextInterval > 0) {
                         try {
                             this.log.trace("Wait for " + nextInterval);
+                            // 睡眠
                             Thread.sleep(nextInterval);
                         } catch (final InterruptedException e) {
                             Thread.currentThread().interrupt();
                             throw new InterruptedIOException();
                         }
                     }
+                    // 设置请求头, 再次进行访问
                     request.setHeaders(origheaders);
                 } else {
+                    // 返回结果
                     return response;
                 }
             } catch (final RuntimeException ex) {

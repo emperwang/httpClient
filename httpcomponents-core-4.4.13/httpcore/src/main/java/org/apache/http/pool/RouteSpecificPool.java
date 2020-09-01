@@ -114,22 +114,25 @@ abstract class RouteSpecificPool<T, C, E extends PoolEntry<T, C>> {
         }
         return true;
     }
-
+    // 回收此route的连接
     public void free(final E entry, final boolean reusable) {
         Args.notNull(entry, "Pool entry");
+        // 从 租用容器中删除
         final boolean found = this.leased.remove(entry);
         Asserts.check(found, "Entry %s has not been leased from this pool", entry);
+        // 如果可重用,则 添加到 available
         if (reusable) {
             this.available.addFirst(entry);
         }
     }
-
+    // 添加一个 连接到此池中
     public E add(final C conn) {
         final E entry = createEntry(conn);
         this.leased.add(entry);
         return entry;
     }
-
+    // 记录那些没有获取到连接的 future
+    // 当有连接回收到,再唤醒这些future
     public void queue(final Future<E> future) {
         if (future == null) {
             return;
@@ -148,19 +151,24 @@ abstract class RouteSpecificPool<T, C, E extends PoolEntry<T, C>> {
 
         this.pending.remove(future);
     }
-
+    // routePool 进行关闭
     public void shutdown() {
+        // 取消 pending
         for (final Future<E> future: this.pending) {
             future.cancel(true);
         }
         this.pending.clear();
+        // 可用连接 关闭
         for (final E entry: this.available) {
             entry.close();
         }
+        // 情况容器
         this.available.clear();
+        // 租用连接关闭
         for (final E entry: this.leased) {
             entry.close();
         }
+        // 租用容器清空
         this.leased.clear();
     }
 

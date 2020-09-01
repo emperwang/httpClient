@@ -57,7 +57,7 @@ import org.apache.http.io.HttpMessageWriterFactory;
 @Contract(threading = ThreadingBehavior.IMMUTABLE_CONDITIONAL)
 public class ManagedHttpClientConnectionFactory
         implements HttpConnectionFactory<HttpRoute, ManagedHttpClientConnection> {
-
+    // id生成器
     private static final AtomicLong COUNTER = new AtomicLong();
     // 饿汉式
     public static final ManagedHttpClientConnectionFactory INSTANCE = new ManagedHttpClientConnectionFactory();
@@ -80,12 +80,16 @@ public class ManagedHttpClientConnectionFactory
             final ContentLengthStrategy incomingContentStrategy,
             final ContentLengthStrategy outgoingContentStrategy) {
         super();
+        // requestWriterFactory为DefaultHttpRequestWriterFactory默认值,即输出writer的类的工厂方法
         this.requestWriterFactory = requestWriterFactory != null ? requestWriterFactory :
                 DefaultHttpRequestWriterFactory.INSTANCE;
+        // 响应解析器的 功能方法
         this.responseParserFactory = responseParserFactory != null ? responseParserFactory :
                 DefaultHttpResponseParserFactory.INSTANCE;
+        // 输入内容的策略
         this.incomingContentStrategy = incomingContentStrategy != null ? incomingContentStrategy :
                 LaxContentLengthStrategy.INSTANCE;
+        // 输出内容的策略
         this.outgoingContentStrategy = outgoingContentStrategy != null ? outgoingContentStrategy :
                 StrictContentLengthStrategy.INSTANCE;
     }
@@ -104,17 +108,21 @@ public class ManagedHttpClientConnectionFactory
     public ManagedHttpClientConnectionFactory() {
         this(null, null);
     }
-
+    // 具体创建连接的地方
     @Override
     public ManagedHttpClientConnection create(final HttpRoute route, final ConnectionConfig config) {
+        // 获取配置
         final ConnectionConfig cconfig = config != null ? config : ConnectionConfig.DEFAULT;
+        // 解码器
         CharsetDecoder charDecoder = null;
+        // 编码器
         CharsetEncoder charEncoder = null;
         final Charset charset = cconfig.getCharset();
         final CodingErrorAction malformedInputAction = cconfig.getMalformedInputAction() != null ?
                 cconfig.getMalformedInputAction() : CodingErrorAction.REPORT;
         final CodingErrorAction unmappableInputAction = cconfig.getUnmappableInputAction() != null ?
                 cconfig.getUnmappableInputAction() : CodingErrorAction.REPORT;
+        // 如果有编码呢,则记录编码
         if (charset != null) {
             charDecoder = charset.newDecoder();
             charDecoder.onMalformedInput(malformedInputAction);
@@ -124,6 +132,7 @@ public class ManagedHttpClientConnectionFactory
             charEncoder.onUnmappableCharacter(unmappableInputAction);
         }
         final String id = "http-outgoing-" + Long.toString(COUNTER.getAndIncrement());
+        // 生成一个 DefaultHttpRequestWriterFactory
         return new LoggingManagedHttpClientConnection(
                 id,
                 log,

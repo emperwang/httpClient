@@ -48,7 +48,7 @@ public final class IdleConnectionEvictor {
     private final long maxIdleTimeMs;
 
     private volatile Exception exception;
-
+    // 默认的情况下, 此sleepTime=10, sleepTimeunit=TimeUnit.SECONDS, maxIdleTime=0, maxIdleTimeUnit=TimeUnit.SECONDS
     public IdleConnectionEvictor(
             final HttpClientConnectionManager connectionManager,
             final ThreadFactory threadFactory,
@@ -79,7 +79,7 @@ public final class IdleConnectionEvictor {
             }
         });
     }
-
+    // 默认的情况下, 此sleepTime=10, sleepTimeunit=TimeUnit.SECONDS, maxIdleTime=0, maxIdleTimeUnit=TimeUnit.SECONDS
     public IdleConnectionEvictor(
             final HttpClientConnectionManager connectionManager,
             final long sleepTime, final TimeUnit sleepTimeUnit,

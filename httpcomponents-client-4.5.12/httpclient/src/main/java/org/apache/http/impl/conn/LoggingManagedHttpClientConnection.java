@@ -66,8 +66,11 @@ class LoggingManagedHttpClientConnection extends DefaultManagedHttpClientConnect
         super(id, bufferSize, fragmentSizeHint, charDecoder, charEncoder,
                 constraints, incomingContentStrategy, outgoingContentStrategy,
                 requestWriterFactory, responseParserFactory);
+        // 记录 log
         this.log = log;
+        // headerlog
         this.headerLog = headerLog;
+        // wirelog
         this.wire = new Wire(wireLog, id);
     }
 

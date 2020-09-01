@@ -56,10 +56,12 @@ class CPool extends AbstractConnPool<HttpRoute, ManagedHttpClientConnection, CPo
             final int defaultMaxPerRoute, final int maxTotal,
             final long timeToLive, final TimeUnit timeUnit) {
         super(connFactory, defaultMaxPerRoute, maxTotal);
+        // ttl time to live
         this.timeToLive = timeToLive;
+        // 时间单位
         this.timeUnit = timeUnit;
     }
-
+    // 创建一个 CPoolEntry
     @Override
     protected CPoolEntry createEntry(final HttpRoute route, final ManagedHttpClientConnection conn) {
         final String id = Long.toString(COUNTER.getAndIncrement());

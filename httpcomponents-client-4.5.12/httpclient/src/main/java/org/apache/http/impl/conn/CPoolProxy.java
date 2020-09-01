@@ -56,7 +56,7 @@ class CPoolProxy implements ManagedHttpClientConnection, HttpContext {
     CPoolEntry getPoolEntry() {
         return this.poolEntry;
     }
-
+    // detach  就是把 proxy中的 poolEntry 释放
     CPoolEntry detach() {
         final CPoolEntry local = this.poolEntry;
         this.poolEntry = null;
@@ -224,7 +224,7 @@ class CPoolProxy implements ManagedHttpClientConnection, HttpContext {
         sb.append('}');
         return sb.toString();
     }
-
+    // 创建CPoolProxy
     public static HttpClientConnection newProxy(final CPoolEntry poolEntry) {
         return new CPoolProxy(poolEntry);
     }

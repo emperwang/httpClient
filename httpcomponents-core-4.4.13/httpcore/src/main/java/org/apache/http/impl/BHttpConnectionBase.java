@@ -112,6 +112,7 @@ public class BHttpConnectionBase implements HttpInetConnection {
             final ContentLengthStrategy outgoingContentStrategy) {
         super();
         Args.positive(bufferSize, "Buffer size");
+        // 数据监测 用途
         final HttpTransportMetricsImpl inTransportMetrics = new HttpTransportMetricsImpl();
         final HttpTransportMetricsImpl outTransportMetrics = new HttpTransportMetricsImpl();
         // 输入流时 SessionInputBufferImpl, 且可以指定编码
@@ -121,11 +122,15 @@ public class BHttpConnectionBase implements HttpInetConnection {
         this.outbuffer = new SessionOutputBufferImpl(outTransportMetrics, bufferSize, fragmentSizeHint,
                 charEncoder);
         this.messageConstraints = messageConstraints;
+        // 连接的 数据监测
         this.connMetrics = new HttpConnectionMetricsImpl(inTransportMetrics, outTransportMetrics);
+        // 输入内容的策略
         this.incomingContentStrategy = incomingContentStrategy != null ? incomingContentStrategy :
             LaxContentLengthStrategy.INSTANCE;
+        // 输出内容的策略
         this.outgoingContentStrategy = outgoingContentStrategy != null ? outgoingContentStrategy :
             StrictContentLengthStrategy.INSTANCE;
+        // 这是一个 保存socket 连接的 引用
         this.socketHolder = new AtomicReference<Socket>();
     }
 
@@ -319,20 +324,25 @@ public class BHttpConnectionBase implements HttpInetConnection {
             }
         }
     }
-
+    // 关闭连接
     @Override
     public void close() throws IOException {
+        // 释放引用中的 socket
         final Socket socket = this.socketHolder.getAndSet(null);
         if (socket != null) {
             try {
+                // 情况输入buffer
                 this.inBuffer.clear();
+                // flush 输出buffer
                 this.outbuffer.flush();
                 try {
                     try {
+                        // 关闭输出
                         socket.shutdownOutput();
                     } catch (final IOException ignore) {
                     }
                     try {
+                        // 关闭输入
                         socket.shutdownInput();
                     } catch (final IOException ignore) {
                     }
@@ -340,6 +350,7 @@ public class BHttpConnectionBase implements HttpInetConnection {
                     // if one isn't supported, the other one isn't either
                 }
             } finally {
+                // 关闭socket
                 socket.close();
             }
         }

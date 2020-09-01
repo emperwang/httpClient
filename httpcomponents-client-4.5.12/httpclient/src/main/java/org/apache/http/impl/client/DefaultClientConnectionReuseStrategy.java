@@ -42,16 +42,18 @@ import org.apache.http.protocol.HttpCoreContext;
 public class DefaultClientConnectionReuseStrategy extends DefaultConnectionReuseStrategy {
 
     public static final DefaultClientConnectionReuseStrategy INSTANCE = new DefaultClientConnectionReuseStrategy();
-
+    // 判断连接是否  keepalive
     @Override
     public boolean keepAlive(final HttpResponse response, final HttpContext context) {
 
         final HttpRequest request = (HttpRequest) context.getAttribute(HttpCoreContext.HTTP_REQUEST);
         if (request != null) {
+            // Connection 请求头
             final Header[] connHeaders = request.getHeaders(HttpHeaders.CONNECTION);
             if (connHeaders.length != 0) {
                 final TokenIterator ti = new BasicTokenIterator(new BasicHeaderIterator(connHeaders, null));
                 while (ti.hasNext()) {
+                    // 如果 connection请求头的值为 Close,则不需要 keepAlive
                     final String token = ti.nextToken();
                     if (HTTP.CONN_CLOSE.equalsIgnoreCase(token)) {
                         return false;
@@ -59,6 +61,7 @@ public class DefaultClientConnectionReuseStrategy extends DefaultConnectionReuse
                 }
             }
         }
+        // 父类再次判断
         return super.keepAlive(response, context);
     }
 

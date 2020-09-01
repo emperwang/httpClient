@@ -111,11 +111,13 @@ public class RetryExec implements ClientExecChain {
                         throw new NonRepeatableRequestException("Cannot retry request " +
                                 "with a non-repeatable request entity", ex);
                     }
+                    // 重新设置请求头,进行下次请求
                     request.setHeaders(origheaders);
                     if (this.log.isInfoEnabled()) {
                         this.log.info("Retrying request to " + route);
                     }
                 } else {
+                    // 如果不是需要进行重试的异常,则抛出
                     if (ex instanceof NoHttpResponseException) {
                         final NoHttpResponseException updatedex = new NoHttpResponseException(
                                 route.getTargetHost().toHostString() + " failed to respond");

@@ -116,6 +116,7 @@ public class ProtocolExec implements ClientExecChain {
 
         final HttpRequest original = request.getOriginal();
         URI uri = null;
+        // 获取 uri
         if (original instanceof HttpUriRequest) {
             uri = ((HttpUriRequest) original).getURI();
         } else {
@@ -130,6 +131,7 @@ public class ProtocolExec implements ClientExecChain {
             }
 
         }
+        // 记录 uri
         request.setURI(uri);
 
         // Re-write request URI if needed
@@ -180,6 +182,7 @@ public class ProtocolExec implements ClientExecChain {
         }
 
         // Run request protocol interceptors
+        // 记录 targetHost  httpRoute  request到context
         context.setAttribute(HttpCoreContext.HTTP_TARGET_HOST, target);
         context.setAttribute(HttpClientContext.HTTP_ROUTE, route);
         context.setAttribute(HttpCoreContext.HTTP_REQUEST, request);

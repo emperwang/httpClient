@@ -68,9 +68,10 @@ public class DefaultServiceUnavailableRetryStrategy implements ServiceUnavailabl
     public DefaultServiceUnavailableRetryStrategy() {
         this(1, 1000);
     }
-
+    // 是否重试的判断
     @Override
     public boolean retryRequest(final HttpResponse response, final int executionCount, final HttpContext context) {
+        // 小于最大重试次数,且 返回码为 503
         return executionCount <= maxRetries &&
             response.getStatusLine().getStatusCode() == HttpStatus.SC_SERVICE_UNAVAILABLE;
     }

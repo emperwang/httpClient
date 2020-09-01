@@ -123,12 +123,18 @@ public class MainClientExec implements ClientExecChain {
         Args.notNull(userTokenHandler, "User token handler");
         this.authenticator      = new HttpAuthenticator();
         this.routeDirector      = new BasicRouteDirector();
+        // 请求执行器
         this.requestExecutor    = requestExecutor;
+        // 连接池
         this.connManager        = connManager;
+        // 重用策略
         this.reuseStrategy      = reuseStrategy;
+        // keepalive 策略
         this.keepAliveStrategy  = keepAliveStrategy;
         this.proxyHttpProcessor = proxyHttpProcessor;
+        // 目标主机的 认证 策略
         this.targetAuthStrategy = targetAuthStrategy;
+        // 代理认证的 策略
         this.proxyAuthStrategy  = proxyAuthStrategy;
         this.userTokenHandler   = userTokenHandler;
     }
@@ -167,7 +173,7 @@ public class MainClientExec implements ClientExecChain {
             proxyAuthState = new AuthState();
             context.setAttribute(HttpClientContext.PROXY_AUTH_STATE, proxyAuthState);
         }
-
+        // 对httpEntity 进行一些加强
         if (request instanceof HttpEntityEnclosingRequest) {
             RequestEntityProxy.enhance((HttpEntityEnclosingRequest) request);
         }
@@ -175,6 +181,7 @@ public class MainClientExec implements ClientExecChain {
         Object userToken = context.getUserToken();
         // 从pool中 获取一个 连接,即socket 连接
         // 获取连接,此返回一个  future
+        // --- 重点 ----  去连接池中请求一个连接
         final ConnectionRequest connRequest = connManager.requestConnection(route, userToken);
         if (execAware != null) {
             if (execAware.isAborted()) {
@@ -191,6 +198,7 @@ public class MainClientExec implements ClientExecChain {
             // 获取连接超时时间
             final int timeout = config.getConnectionRequestTimeout();
             // 真正获取连接的地方
+            // 获取刚刚请求的连接
             managedConn = connRequest.get(timeout > 0 ? timeout : 0, TimeUnit.MILLISECONDS);
         } catch(final InterruptedException interrupted) {
             Thread.currentThread().interrupt();
@@ -207,8 +215,10 @@ public class MainClientExec implements ClientExecChain {
 
         if (config.isStaleConnectionCheckEnabled()) {
             // validate connection
+            // 有socket 连接了,就表示有 open了
             if (managedConn.isOpen()) {
                 this.log.debug("Stale connection check");
+                // 有socket连接了,就为stale,那么就关闭
                 if (managedConn.isStale()) {
                     this.log.debug("Stale connection detected");
                     managedConn.close();
@@ -223,8 +233,10 @@ public class MainClientExec implements ClientExecChain {
             }
 
             HttpResponse response;
+            // 可以看到这里是一个 死循环哦, 来执行具体的请求
+            // 重点 - -----------
             for (int execCount = 1;; execCount++) {
-
+                // 执行过一次, 且request不可重复,则抛出错误
                 if (execCount > 1 && !RequestEntityProxy.isRepeatable(request)) {
                     throw new NonRepeatableRequestException("Cannot retry request " +
                             "with a non-repeatable request entity.");
@@ -233,22 +245,25 @@ public class MainClientExec implements ClientExecChain {
                 if (execAware != null && execAware.isAborted()) {
                     throw new RequestAbortedException("Request aborted");
                 }
-
+                // 当前没有连接,则创建连接
                 if (!managedConn.isOpen()) {
                     this.log.debug("Opening connection " + route);
                     try {
-                        // 建立一条到目的主机的 route
+                        // 建立一条到目的主机的 route,真正创建socket 连接
+                        // ----- 重点 -------------
                         establishRoute(proxyAuthState, managedConn, route, request, context);
                     } catch (final TunnelRefusedException ex) {
                         if (this.log.isDebugEnabled()) {
                             this.log.debug(ex.getMessage());
                         }
                         response = ex.getResponse();
+                        // 发生异常,则退出循环
                         break;
                     }
                 }
                 // socket timeout 进行配置
                 final int timeout = config.getSocketTimeout();
+                // 设置 socketTimeout时间
                 if (timeout >= 0) {
                     managedConn.setSocketTimeout(timeout);
                 }
@@ -260,25 +275,29 @@ public class MainClientExec implements ClientExecChain {
                 if (this.log.isDebugEnabled()) {
                     this.log.debug("Executing request " + request.getRequestLine());
                 }
-
+                // 如果没有 Authorization 请求头
                 if (!request.containsHeader(AUTH.WWW_AUTH_RESP)) {
                     if (this.log.isDebugEnabled()) {
                         this.log.debug("Target auth state: " + targetAuthState.getState());
                     }
                     this.authenticator.generateAuthResponse(request, targetAuthState, context);
                 }
+                // 没有请求Proxy-Authorization  且没 route 不是 tunnelled
                 if (!request.containsHeader(AUTH.PROXY_AUTH_RESP) && !route.isTunnelled()) {
                     if (this.log.isDebugEnabled()) {
                         this.log.debug("Proxy auth state: " + proxyAuthState.getState());
                     }
                     this.authenticator.generateAuthResponse(request, proxyAuthState, context);
                 }
-
+                // 记录 http-request到context中
                 context.setAttribute(HttpCoreContext.HTTP_REQUEST, request);
                 // 执行请求,并得到请求体
+                // 开始执行请求
+                // ---- 重点 --------
                 response = requestExecutor.execute(request, managedConn, context);
 
                 // The connection is in or can be brought to a re-usable state.
+                // keepalive的策略
                 if (reuseStrategy.keepAlive(response, context)) {
                     // Set the idle duration of this connection
                     // 获取 timeout 的值
@@ -297,22 +316,28 @@ public class MainClientExec implements ClientExecChain {
                     //  设置可重用的标志
                     connHolder.markReusable();
                 } else {
+                    // 否则标记为 不可重用
                     connHolder.markNonReusable();
                 }
-
+                // 如果需要认真
                 if (needAuthentication(
                         targetAuthState, proxyAuthState, route, response, context)) {
                     // Make sure the response body is fully consumed, if present
                     final HttpEntity entity = response.getEntity();
+                    // 如果连接重用,则关闭entity流
                     if (connHolder.isReusable()) {
+                        // 关闭 entity对应流
                         EntityUtils.consume(entity);
                     } else {
+                        // 连接不可重用,则关闭连接
                         managedConn.close();
+                        // 如果代理认证状态Wie success
                         if (proxyAuthState.getState() == AuthProtocolState.SUCCESS
                                 && proxyAuthState.isConnectionBased()) {
                             this.log.debug("Resetting proxy auth state");
                             proxyAuthState.reset();
                         }
+                        // 如果 target 认证状态为 success
                         if (targetAuthState.getState() == AuthProtocolState.SUCCESS
                                 && targetAuthState.isConnectionBased()) {
                             this.log.debug("Resetting target auth state");
@@ -320,6 +345,8 @@ public class MainClientExec implements ClientExecChain {
                         }
                     }
                     // discard previous auth headers
+                    // 得到原来的请求
+                    // 移除认证的header
                     final HttpRequest original = request.getOriginal();
                     if (!original.containsHeader(AUTH.WWW_AUTH_RESP)) {
                         request.removeHeaders(AUTH.WWW_AUTH_RESP);
@@ -331,22 +358,28 @@ public class MainClientExec implements ClientExecChain {
                     break;
                 }
             }
-
+            // userToken的获取
             if (userToken == null) {
                 userToken = userTokenHandler.getUserToken(context);
                 context.setAttribute(HttpClientContext.USER_TOKEN, userToken);
             }
+            // 设置 state
+            // 此就是 连接的 state
             if (userToken != null) {
                 connHolder.setState(userToken);
             }
 
             // check for entity, release connection if possible
+            // 获取响应体
             final HttpEntity entity = response.getEntity();
+            // 如果没有响应体,或者响应不是是 streaming,则回收连接
             if (entity == null || !entity.isStreaming()) {
                 // connection not needed and (assumed to be) in re-usable state
+                // 回收连接
                 connHolder.releaseConnection();
                 return new HttpResponseProxy(response, null);
             }
+            // 返回响应
             return new HttpResponseProxy(response, connHolder);
         } catch (final ConnectionShutdownException ex) {
             final InterruptedIOException ioex = new InterruptedIOException(
@@ -354,10 +387,13 @@ public class MainClientExec implements ClientExecChain {
             ioex.initCause(ex);
             throw ioex;
         } catch (final HttpException ex) {
+            // 中止 连接
             connHolder.abortConnection();
             throw ex;
         } catch (final IOException ex) {
+            // 中止连接
             connHolder.abortConnection();
+            // 认证装填复位
             if (proxyAuthState.isConnectionBased()) {
                 proxyAuthState.reset();
             }
@@ -366,6 +402,7 @@ public class MainClientExec implements ClientExecChain {
             }
             throw ex;
         } catch (final RuntimeException ex) {
+            // 中止连接,并复位认证状态
             connHolder.abortConnection();
             if (proxyAuthState.isConnectionBased()) {
                 proxyAuthState.reset();
@@ -404,6 +441,7 @@ public class MainClientExec implements ClientExecChain {
             switch (step) {
             // 直接连接主机
             case HttpRouteDirector.CONNECT_TARGET:
+                // 和目的主机 进行连接
                 this.connManager.connect(
                         managedConn,
                         route,
@@ -445,9 +483,11 @@ public class MainClientExec implements ClientExecChain {
                 break;
 
             case HttpRouteDirector.UNREACHABLE:
+                // 出错, 主机不可达
                 throw new HttpException("Unable to establish route: " +
                         "planned = " + route + "; current = " + fact);
             case HttpRouteDirector.COMPLETE:
+                // 标记连接完成
                 this.connManager.routeComplete(managedConn, route, context);
                 break;
             default:

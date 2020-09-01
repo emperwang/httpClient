@@ -46,7 +46,7 @@ class CPoolEntry extends PoolEntry<HttpRoute, ManagedHttpClientConnection> {
 
     private final Log log;
     private volatile boolean routeComplete;
-
+    // 创建 CPoolEntry
     public CPoolEntry(
             final Log log,
             final String id,
@@ -54,9 +54,10 @@ class CPoolEntry extends PoolEntry<HttpRoute, ManagedHttpClientConnection> {
             final ManagedHttpClientConnection conn,
             final long timeToLive, final TimeUnit timeUnit) {
         super(id, route, conn, timeToLive, timeUnit);
+        // 日志
         this.log = log;
     }
-
+    // 标记 route 完成
     public void markRouteComplete() {
         this.routeComplete = true;
     }
@@ -64,7 +65,7 @@ class CPoolEntry extends PoolEntry<HttpRoute, ManagedHttpClientConnection> {
     public boolean isRouteComplete() {
         return this.routeComplete;
     }
-
+    // 释放连接
     public void closeConnection() throws IOException {
         final HttpClientConnection conn = getConnection();
         conn.close();
@@ -77,6 +78,7 @@ class CPoolEntry extends PoolEntry<HttpRoute, ManagedHttpClientConnection> {
 
     @Override
     public boolean isExpired(final long now) {
+        // 由 poolEntry 来检测是否 超时
         final boolean expired = super.isExpired(now);
         if (expired && this.log.isDebugEnabled()) {
             this.log.debug("Connection " + this + " expired @ " + new Date(getExpiry()));
@@ -89,10 +91,11 @@ class CPoolEntry extends PoolEntry<HttpRoute, ManagedHttpClientConnection> {
         final HttpClientConnection conn = getConnection();
         return !conn.isOpen();
     }
-
+    // 释放连接
     @Override
     public void close() {
         try {
+            // 关闭连接
             closeConnection();
         } catch (final IOException ex) {
             this.log.debug("I/O error closing connection", ex);

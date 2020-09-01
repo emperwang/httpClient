@@ -72,6 +72,7 @@ public class PlainConnectionSocketFactory implements ConnectionSocketFactory {
             sock.bind(localAddress);
         }
         try {
+            // 连接目的主机
             sock.connect(remoteAddress, connectTimeout);
         } catch (final IOException ex) {
             try {

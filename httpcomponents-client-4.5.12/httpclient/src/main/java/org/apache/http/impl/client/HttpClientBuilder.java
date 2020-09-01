@@ -950,44 +950,59 @@ public class HttpClientBuilder {
     public CloseableHttpClient build() {
         // Create main request executor
         // We copy the instance fields to avoid changing them, and rename to avoid accidental use of the wrong version
+        // 尾缀匹配器
         PublicSuffixMatcher publicSuffixMatcherCopy = this.publicSuffixMatcher;
+        // 1.如果没有配置呢,就使用一个默认值
         if (publicSuffixMatcherCopy == null) {
             publicSuffixMatcherCopy = PublicSuffixMatcherLoader.getDefault();
         }
         // 执行器
         HttpRequestExecutor requestExecCopy = this.requestExec;
+        // 2.如果没有设置执行器,则配置默认的执行器
         if (requestExecCopy == null) {
             requestExecCopy = new HttpRequestExecutor();
         }
         // 连接池
         HttpClientConnectionManager connManagerCopy = this.connManager;
+        // 3. 如果没有配置连接池,则也会配置一个
         if (connManagerCopy == null) {
             LayeredConnectionSocketFactory sslSocketFactoryCopy = this.sslSocketFactory;
+            // 3.1 这里主要是 创建sslSocketFactory
             if (sslSocketFactoryCopy == null) {
+                // 3.2  获取配置的系统属性
+                // 支持的https 协议
                 final String[] supportedProtocols = systemProperties ? split(
                         System.getProperty("https.protocols")) : null;
+                // 支持的 https 算法
                 final String[] supportedCipherSuites = systemProperties ? split(
                         System.getProperty("https.cipherSuites")) : null;
-                // 主机名校验
+                // 3.3 设置主机名校验
                 HostnameVerifier hostnameVerifierCopy = this.hostnameVerifier;
+                // 没有配置主机名校验,则使用默认的校验规则
                 if (hostnameVerifierCopy == null) {
                     hostnameVerifierCopy = new DefaultHostnameVerifier(publicSuffixMatcherCopy);
                 }
+                // 3.4 创建 SSLConnectionSocketFactory
+                // 如果设置了 sslContext,就加载了证书的context
+                // 那么就使用此指定的 sslContext来常见 sslConnectionSocketFactory
                 if (sslContext != null) {
                     sslSocketFactoryCopy = new SSLConnectionSocketFactory(
                             sslContext, supportedProtocols, supportedCipherSuites, hostnameVerifierCopy);
                 } else {
+                    // 如果没有配置sslContext,但是设置了系统属性,那么就使用系统属性来 创建 SSLConnectionSocketFactory
                     if (systemProperties) {
                         sslSocketFactoryCopy = new SSLConnectionSocketFactory(
                                 (SSLSocketFactory) SSLSocketFactory.getDefault(),
                                 supportedProtocols, supportedCipherSuites, hostnameVerifierCopy);
                     } else {
+                        // 系统属性 sslContext 都没有设置,则创建一个默认的
                         sslSocketFactoryCopy = new SSLConnectionSocketFactory(
                                 SSLContexts.createDefault(),
                                 hostnameVerifierCopy);
                     }
                 }
             }
+            // 3.5 创建连接池
             @SuppressWarnings("resource")
             final PoolingHttpClientConnectionManager poolingmgr = new PoolingHttpClientConnectionManager(
                     RegistryBuilder.<ConnectionSocketFactory>create()
@@ -999,6 +1014,7 @@ public class HttpClientBuilder {
                     dnsResolver,
                     connTimeToLive,
                     connTimeToLiveTimeUnit != null ? connTimeToLiveTimeUnit : TimeUnit.MILLISECONDS);
+            // 3.6 属性以及设置的配置
             if (defaultSocketConfig != null) {
                 poolingmgr.setDefaultSocketConfig(defaultSocketConfig);
             }
@@ -1006,51 +1022,65 @@ public class HttpClientBuilder {
                 poolingmgr.setDefaultConnectionConfig(defaultConnectionConfig);
             }
             if (systemProperties) {
+                // 是否设置了 http.keepAlive
                 String s = System.getProperty("http.keepAlive", "true");
                 if ("true".equalsIgnoreCase(s)) {
+                    // 最大连接数
                     s = System.getProperty("http.maxConnections", "5");
                     final int max = Integer.parseInt(s);
+                    // 设置默认的 route数为  http.maxConnections
                     poolingmgr.setDefaultMaxPerRoute(max);
+                    // 最大连接数为 两倍的 http.maxConnections
                     poolingmgr.setMaxTotal(2 * max);
                 }
             }
+            // 设置最大连接数
             if (maxConnTotal > 0) {
                 poolingmgr.setMaxTotal(maxConnTotal);
             }
+            // maxRoute
             if (maxConnPerRoute > 0) {
                 poolingmgr.setDefaultMaxPerRoute(maxConnPerRoute);
             }
+            // 记录连接池
             connManagerCopy = poolingmgr;
         }
+        // 4. 连接重用的策略
         ConnectionReuseStrategy reuseStrategyCopy = this.reuseStrategy;
+        // 4.1 如果没有设置 连接重用的策略
         if (reuseStrategyCopy == null) {
+            // 4.2 如果使用系统属性,则判断是否设置http.keepAlive
             if (systemProperties) {
                 final String s = System.getProperty("http.keepAlive", "true");
+                // 如果配置了http.keepAlive,则创建默认额 连接重用策略
                 if ("true".equalsIgnoreCase(s)) {
                     reuseStrategyCopy = DefaultClientConnectionReuseStrategy.INSTANCE;
                 } else {
+                    // 否则 没有连接重用策略
                     reuseStrategyCopy = NoConnectionReuseStrategy.INSTANCE;
                 }
             } else {
+                // 4.3 如果不使用系统属性,则创建默认的连接重用策略
                 reuseStrategyCopy = DefaultClientConnectionReuseStrategy.INSTANCE;
             }
         }
-        // keepAlive的 策略
+        // 5. keepAlive的 策略
         ConnectionKeepAliveStrategy keepAliveStrategyCopy = this.keepAliveStrategy;
+        // 5.1 如果没有设置,则配置一个默认的  keepAlive的策略
         if (keepAliveStrategyCopy == null) {
             keepAliveStrategyCopy = DefaultConnectionKeepAliveStrategy.INSTANCE;
         }
-        // 目标机器的认证的策略
+        // 6. 目标机器的认证的策略
         AuthenticationStrategy targetAuthStrategyCopy = this.targetAuthStrategy;
         if (targetAuthStrategyCopy == null) {
             targetAuthStrategyCopy = TargetAuthenticationStrategy.INSTANCE;
         }
-        // 代理机器的 认证策略
+        // 7. 代理机器的 认证策略
         AuthenticationStrategy proxyAuthStrategyCopy = this.proxyAuthStrategy;
         if (proxyAuthStrategyCopy == null) {
             proxyAuthStrategyCopy = ProxyAuthenticationStrategy.INSTANCE;
         }
-        //
+        // 8. useToken的处理
         UserTokenHandler userTokenHandlerCopy = this.userTokenHandler;
         if (userTokenHandlerCopy == null) {
             if (!connectionStateDisabled) {
@@ -1059,7 +1089,7 @@ public class HttpClientBuilder {
                 userTokenHandlerCopy = NoopUserTokenHandler.INSTANCE;
             }
         }
-
+        // 9. userAgent的处理
         String userAgentCopy = this.userAgent;
         if (userAgentCopy == null) {
             if (systemProperties) {
@@ -1071,7 +1101,7 @@ public class HttpClientBuilder {
                         "org.apache.http.client", getClass());
             }
         }
-        // 创建主要的执行链
+        // 10. 创建主要的执行器
         ClientExecChain execChain = createMainExec(
                 requestExecCopy,
                 connManagerCopy,
@@ -1081,26 +1111,27 @@ public class HttpClientBuilder {
                 targetAuthStrategyCopy,
                 proxyAuthStrategyCopy,
                 userTokenHandlerCopy);
-        // 装饰执行链
+        // 11 装饰执行链
         execChain = decorateMainExec(execChain);
-
+        // 12. 创建httpProcessor
+        // 这里的 httpProcessor保存了众多的 拦截器,用于对http协议的各种处理
         HttpProcessor httpprocessorCopy = this.httpprocessor;
         if (httpprocessorCopy == null) {
-
+            // 12.1 先创建一个 builder 来创建 httpProcessor
             final HttpProcessorBuilder b = HttpProcessorBuilder.create();
-            // request的拦截器
+            // 12.2 如果设置了request的拦截器,则添加到 builder中
             if (requestFirst != null) {
                 for (final HttpRequestInterceptor i: requestFirst) {
                     b.addFirst(i);
                 }
             }
-            // response的拦截器
+            // 12.3 response的拦截器
             if (responseFirst != null) {
                 for (final HttpResponseInterceptor i: responseFirst) {
                     b.addFirst(i);
                 }
             }
-            // 添加各种拦截器
+            // 12.4 添加各种拦截器
             b.addAll(
                     new RequestDefaultHeaders(defaultHeaders),
                     new RequestContent(),
@@ -1108,11 +1139,13 @@ public class HttpClientBuilder {
                     new RequestClientConnControl(),
                     new RequestUserAgent(userAgentCopy),
                     new RequestExpectContinue());
+            // 12.5 cookie 拦截器
             if (!cookieManagementDisabled) {
                 b.add(new RequestAddCookies());
             }
             // 允许的 压缩类型 拦截器
             // 是否允许压缩
+            // 12.6 允许的压缩类型 拦截器
             if (!contentCompressionDisabled) {
                 if (contentDecoderMap != null) {
                     final List<String> encodings = new ArrayList<String>(contentDecoderMap.keySet());
@@ -1122,15 +1155,16 @@ public class HttpClientBuilder {
                     b.add(new RequestAcceptEncoding());
                 }
             }
-            //
+            // 12.7 认证缓存拦截器
             if (!authCachingDisabled) {
                 b.add(new RequestAuthCache());
             }
-            // cookie 管理
+            // 12.8 cookie 管理
             if (!cookieManagementDisabled) {
                 b.add(new ResponseProcessCookies());
             }
-            // 响应的context 是否允许压缩
+            // 响应的content 是否允许压缩
+            // 12.9 添加responseContent编码
             if (!contentCompressionDisabled) {
                 if (contentDecoderMap != null) {
                     final RegistryBuilder<InputStreamFactory> b2 = RegistryBuilder.create();
@@ -1142,36 +1176,38 @@ public class HttpClientBuilder {
                     b.add(new ResponseContentEncoding());
                 }
             }
-            // request最后的一个 拦截器
+            // 12.10 request最后的一个 拦截器
             if (requestLast != null) {
                 for (final HttpRequestInterceptor i: requestLast) {
                     b.addLast(i);
                 }
             }
-            // response的最后一个拦截器
+            // 12.11 response的最后一个拦截器
             if (responseLast != null) {
                 for (final HttpResponseInterceptor i: responseLast) {
                     b.addLast(i);
                 }
             }
-            // 根据 添加的拦截器 创建个月 processor
+            // 12.12 根据 添加的拦截器 创建个月 processor
             httpprocessorCopy = b.build();
         }
         // 对http 协议的处理
+        // 13. 装饰者模式, 根据创建的Httpprocessor 来装饰具体的执行器,即在执行前和执行后,调用各种拦截器
         execChain = new ProtocolExec(execChain, httpprocessorCopy);
         // 装饰
         execChain = decorateProtocolExec(execChain);
 
         // Add request retry executor, if not disabled
+        // 14. 如果允许失败重试,则再次使用装饰者模式,对主要执行器进行包装,即catch异常,并进行重试
         if (!automaticRetriesDisabled) {
             HttpRequestRetryHandler retryHandlerCopy = this.retryHandler;
             if (retryHandlerCopy == null) {
                 retryHandlerCopy = DefaultHttpRequestRetryHandler.INSTANCE;
             }
-            // 重试机制
+            // 14.1 重试机制
             execChain = new RetryExec(execChain, retryHandlerCopy);
         }
-        //
+        // 15. router 计划者,用来解析route信息,其中就包含了代理
         HttpRoutePlanner routePlannerCopy = this.routePlanner;
         if (routePlannerCopy == null) {
             // scheme对应的port的解析器
@@ -1190,12 +1226,14 @@ public class HttpClientBuilder {
         }
 
         // Optionally, add service unavailable retry executor
+        // 15. 装饰者, 服务不可用时的重试
         final ServiceUnavailableRetryStrategy serviceUnavailStrategyCopy = this.serviceUnavailStrategy;
         if (serviceUnavailStrategyCopy != null) {
             execChain = new ServiceUnavailableRetryExec(execChain, serviceUnavailStrategyCopy);
         }
 
         // Add redirect executor, if not disabled
+        // 16. 重定向的执行 -- 装饰者
         if (!redirectHandlingDisabled) {
             RedirectStrategy redirectStrategyCopy = this.redirectStrategy;
             // 重定向
@@ -1207,10 +1245,11 @@ public class HttpClientBuilder {
 
         // Optionally, add connection back-off executor
         // connection backOff
+        // 17. 装饰者 -- 重试的间隔
         if (this.backoffManager != null && this.connectionBackoffStrategy != null) {
             execChain = new BackoffStrategyExec(execChain, this.connectionBackoffStrategy, this.backoffManager);
         }
-
+        // 18. auth时的scheme 提供者
         Lookup<AuthSchemeProvider> authSchemeRegistryCopy = this.authSchemeRegistry;
         if (authSchemeRegistryCopy == null) {
             authSchemeRegistryCopy = RegistryBuilder.<AuthSchemeProvider>create()
@@ -1221,16 +1260,17 @@ public class HttpClientBuilder {
                 .register(AuthSchemes.KERBEROS, new KerberosSchemeFactory())
                 .build();
         }
+        // 19. cookie 相关
         Lookup<CookieSpecProvider> cookieSpecRegistryCopy = this.cookieSpecRegistry;
         if (cookieSpecRegistryCopy == null) {
             cookieSpecRegistryCopy = CookieSpecRegistries.createDefault(publicSuffixMatcherCopy);
         }
-
+        // 20. cookie 的存储
         CookieStore defaultCookieStore = this.cookieStore;
         if (defaultCookieStore == null) {
             defaultCookieStore = new BasicCookieStore();
         }
-
+        // 21. credential 提供者
         CredentialsProvider defaultCredentialsProvider = this.credentialsProvider;
         if (defaultCredentialsProvider == null) {
             if (systemProperties) {
@@ -1239,18 +1279,22 @@ public class HttpClientBuilder {
                 defaultCredentialsProvider = new BasicCredentialsProvider();
             }
         }
-
+        // 22. 记录需要关闭的资源
+        // 即记录那些需要关闭的资源,当httpClient关闭时,把记录额这些资源也同样关闭
         List<Closeable> closeablesCopy = closeables != null ? new ArrayList<Closeable>(closeables) : null;
+        // 连接池 是否是共用的,如果是那么需要用户来进行管理,如果不是,则httpClient 来管理
         if (!this.connManagerShared) {
             if (closeablesCopy == null) {
                 closeablesCopy = new ArrayList<Closeable>(1);
             }
+            // 记录连接池
             final HttpClientConnectionManager cm = connManagerCopy;
-
+            // 22.1 如果允许 关闭过期和idle超时的连接,则创建一个线程来关闭
             if (evictExpiredConnections || evictIdleConnections) {
                 final IdleConnectionEvictor connectionEvictor = new IdleConnectionEvictor(cm,
                         maxIdleTime > 0 ? maxIdleTime : 10, maxIdleTimeUnit != null ? maxIdleTimeUnit : TimeUnit.SECONDS,
                         maxIdleTime, maxIdleTimeUnit);
+                // 22.2 把此线程也记录下来,是需要关闭的资源
                 closeablesCopy.add(new Closeable() {
 
                     @Override
@@ -1267,6 +1311,7 @@ public class HttpClientBuilder {
                 // 线程开始
                 connectionEvictor.start();
             }
+            // 22.3 把连接池记录下来
             closeablesCopy.add(new Closeable() {
 
                 @Override
@@ -1276,7 +1321,7 @@ public class HttpClientBuilder {
 
             });
         }
-        // 创建了 InternalHttpClient
+        // 23. 创建了 InternalHttpClient
         return new InternalHttpClient(
                 execChain,
                 connManagerCopy,

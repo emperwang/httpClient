@@ -68,19 +68,22 @@ class ConnectionHolder implements ConnectionReleaseTrigger, Cancellable, Closeab
             final HttpClientConnection managedConn) {
         super();
         this.log = log;
+        // 管理器
         this.manager = manager;
+        // 连接
         this.managedConn = managedConn;
+        // 是否释放
         this.released = new AtomicBoolean(false);
     }
-
+    // 是否可重用
     public boolean isReusable() {
         return this.reusable;
     }
-
+    // 标记可重用
     public void markReusable() {
         this.reusable = true;
     }
-
+    // 标记不可重用
     public void markNonReusable() {
         this.reusable = false;
     }
@@ -95,16 +98,18 @@ class ConnectionHolder implements ConnectionReleaseTrigger, Cancellable, Closeab
             this.timeUnit = timeUnit;
         }
     }
-
+    // 释放 连接
     private void releaseConnection(final boolean reusable) {
         if (this.released.compareAndSet(false, true)) {
             synchronized (this.managedConn) {
                 // 如果可重用,则回收到 pool中
                 if (reusable) {
+                    // 回收连接
                     this.manager.releaseConnection(this.managedConn,
                             this.state, this.validDuration, this.timeUnit);
                 } else {
                     try {
+                        // 关闭连接
                         this.managedConn.close();
                         log.debug("Connection discarded");
                     } catch (final IOException ex) {
@@ -119,17 +124,20 @@ class ConnectionHolder implements ConnectionReleaseTrigger, Cancellable, Closeab
             }
         }
     }
-
+    // 释放连接
     @Override
     public void releaseConnection() {
+        // 回收连接
         releaseConnection(this.reusable);
     }
-
+    // 中止连接
+    // 当执行器请求发生 IOException时执行
     @Override
     public void abortConnection() {
         if (this.released.compareAndSet(false, true)) {
             synchronized (this.managedConn) {
                 try {
+                    // 连接关闭
                     this.managedConn.shutdown();
                     log.debug("Connection discarded");
                 } catch (final IOException ex) {
@@ -137,6 +145,7 @@ class ConnectionHolder implements ConnectionReleaseTrigger, Cancellable, Closeab
                         this.log.debug(ex.getMessage(), ex);
                     }
                 } finally {
+                    // 回收资源
                     this.manager.releaseConnection(
                             this.managedConn, null, 0, TimeUnit.MILLISECONDS);
                 }

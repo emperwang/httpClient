@@ -98,6 +98,7 @@ public class DefaultBHttpClientConnection extends BHttpConnectionBase
         // 此是吧 request写入到 buffer中
         this.requestWriter = (requestWriterFactory != null ? requestWriterFactory :
             DefaultHttpRequestWriterFactory.INSTANCE).create(getSessionOutputBuffer());
+        // 响应解析器
         this.responseParser = (responseParserFactory != null ? responseParserFactory :
             DefaultHttpResponseParserFactory.INSTANCE).create(getSessionInputBuffer(), constraints);
     }
