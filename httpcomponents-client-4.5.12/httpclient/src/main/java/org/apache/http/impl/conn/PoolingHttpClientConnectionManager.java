@@ -390,6 +390,7 @@ public class PoolingHttpClientConnectionManager
         Args.notNull(managedConn, "Managed Connection");
         Args.notNull(route, "HTTP route");
         final ManagedHttpClientConnection conn;
+        // 获取到  managedConn 对应的连接池中的那个连接
         synchronized (managedConn) {
             final CPoolEntry entry = CPoolProxy.getPoolEntry(managedConn);
             conn = entry.getConnection();

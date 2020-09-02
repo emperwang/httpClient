@@ -68,8 +68,11 @@ public class BasicStatusLine implements StatusLine, Cloneable, Serializable {
     public BasicStatusLine(final ProtocolVersion version, final int statusCode,
                            final String reasonPhrase) {
         super();
+        // 协议版本
         this.protoVersion = Args.notNull(version, "Version");
+        // 响应码
         this.statusCode = Args.notNegative(statusCode, "Status code");
+        // 原因
         this.reasonPhrase = reasonPhrase;
     }
 

@@ -88,6 +88,7 @@ public class EnglishReasonPhraseCatalog implements ReasonPhraseCatalog {
 
 
     /** Reason phrases lookup table. */
+    // 静态代码块,记录reason
     private static final String[][] REASON_PHRASES = new String[][]{
         null,
         new String[3],  // 1xx
@@ -106,6 +107,7 @@ public class EnglishReasonPhraseCatalog implements ReasonPhraseCatalog {
      * @param status    the status code for which to define the phrase
      * @param reason    the reason phrase for this status code
      */
+    // 设置reason
     private static void setReason(final int status, final String reason) {
         final int category = status / 100;
         final int subcode  = status - 100*category;
@@ -116,6 +118,7 @@ public class EnglishReasonPhraseCatalog implements ReasonPhraseCatalog {
     // ----------------------------------------------------- Static Initializer
 
     /** Set up status code to "reason phrase" map. */
+    // 静态代码 初始化 响应码 对应的原因
     static {
         // HTTP 1.0 Server status codes -- see RFC 1945
         setReason(HttpStatus.SC_OK,

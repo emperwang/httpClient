@@ -88,11 +88,13 @@ public class DefaultHttpResponseFactory implements HttpResponseFactory {
 
 
     // non-javadoc, see interface HttpResponseFactory
+    // 创建 response
     @Override
     public HttpResponse newHttpResponse(
             final StatusLine statusline,
             final HttpContext context) {
         Args.notNull(statusline, "Status line");
+        // 创建一个 baseResponse
         return new BasicHttpResponse(statusline, this.reasonCatalog, determineLocale(context));
     }
 

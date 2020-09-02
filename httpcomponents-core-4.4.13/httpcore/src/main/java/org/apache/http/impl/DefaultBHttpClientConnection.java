@@ -125,53 +125,62 @@ public class DefaultBHttpClientConnection extends BHttpConnectionBase
     public void bind(final Socket socket) throws IOException {
         super.bind(socket);
     }
-
+    // 等待一个时间 获取响应
     @Override
     public boolean isResponseAvailable(final int timeout) throws IOException {
+        // 确定输入输出buffer 绑定到了 输入输出流中
         ensureOpen();
         try {
+            // 等待一段时间从输入流中读取数据
             return awaitInput(timeout);
         } catch (final SocketTimeoutException ex) {
             return false;
         }
     }
-
+    // 发送请求行 到输出缓存中
     @Override
     public void sendRequestHeader(final HttpRequest request)
             throws HttpException, IOException {
         Args.notNull(request, "HTTP request");
-        // 确认流已经打开了
+        // 1. 确认流已经打开了
         ensureOpen();
-        // 把request写入到 buffer中
+        // 2. 把request写入到 buffer中
         this.requestWriter.write(request);
+        // 扩展方法
         onRequestSubmitted(request);
-        // 增加 输出
+        // 3. 增加 输出
         incrementRequestCount();
     }
-
+    // 发送请求体
     @Override
     public void sendRequestEntity(final HttpEntityEnclosingRequest request)
             throws HttpException, IOException {
         Args.notNull(request, "HTTP request");
+        // 保证流已经打开, 并进行了绑定
         ensureOpen();
         // 获取请求体
         final HttpEntity entity = request.getEntity();
         if (entity == null) {
             return;
         }
+        //
         final OutputStream outStream = prepareOutput(request);
         // 把entity 数据写入到  outStream中
+        // 此处的outStream 就是输出流
         entity.writeTo(outStream);
         outStream.close();
     }
     // 接收响应头
     @Override
     public HttpResponse receiveResponseHeader() throws HttpException, IOException {
+        // 保证流已经打开
         ensureOpen();
         // 解析请求行  和  请求头信息
         final HttpResponse response = this.responseParser.parse();
+        // 扩展方法
         onResponseReceived(response);
         if (response.getStatusLine().getStatusCode() >= HttpStatus.SC_OK) {
+            // 响应数 增加
             incrementResponseCount();
         }
         return response;

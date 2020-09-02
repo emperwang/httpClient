@@ -109,11 +109,15 @@ public class BasicHttpEntity extends AbstractHttpEntity {
     @Override
     public void writeTo(final OutputStream outStream) throws IOException {
         Args.notNull(outStream, "Output stream");
+        // 获取请求的 entity流
         final InputStream inStream = getContent();
         try {
             int l;
+            // 缓存,4096大小
             final byte[] tmp = new byte[OUTPUT_BUFFER_SIZE];
+            // 先把数据读取到  tmp 缓存中
             while ((l = inStream.read(tmp)) != -1) {
+                // 把缓存中的数据 写出到 outStream
                 outStream.write(tmp, 0, l);
             }
         } finally {

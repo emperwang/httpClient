@@ -66,14 +66,20 @@ public class BasicHttpResponse extends AbstractHttpMessage implements HttpRespon
      * @param locale            the locale for looking up reason phrases, or
      *                          {@code null} for the system locale
      */
+    // 创建
     public BasicHttpResponse(final StatusLine statusline,
                              final ReasonPhraseCatalog catalog,
                              final Locale locale) {
         super();
+        // 响应行
         this.statusline = Args.notNull(statusline, "Status line");
+        // 版本
         this.ver = statusline.getProtocolVersion();
+        // 响应阿莫
         this.code = statusline.getStatusCode();
+        // 响应  reason
         this.reasonPhrase = statusline.getReasonPhrase();
+        // 分类
         this.reasonCatalog = catalog;
         this.locale = locale;
     }

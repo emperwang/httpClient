@@ -436,8 +436,9 @@ public class MainClientExec implements ClientExecChain {
         int step;
         do {
             final HttpRoute fact = tracker.toRoute();
+            // 判断下次连接的 target是 直连  代理连  还是连接完成
             step = this.routeDirector.nextStep(route, fact);
-
+            // 根据不同的情况进行具体的连接
             switch (step) {
             // 直接连接主机
             case HttpRouteDirector.CONNECT_TARGET:
@@ -459,13 +460,14 @@ public class MainClientExec implements ClientExecChain {
                 final HttpHost proxy  = route.getProxyHost();
                 tracker.connectProxy(proxy, route.isSecure() && !route.isTunnelled());
                 break;
+                // 通道连接
             case HttpRouteDirector.TUNNEL_TARGET: {
                 final boolean secure = createTunnelToTarget(
                         proxyAuthState, managedConn, route, request, context);
                 this.log.debug("Tunnel to target created.");
                 tracker.tunnelTarget(secure);
             }   break;
-
+            ///  通道代理
             case HttpRouteDirector.TUNNEL_PROXY: {
                 // The most simple example for this case is a proxy chain
                 // of two proxies, where P1 must be tunnelled to P2.
@@ -481,15 +483,17 @@ public class MainClientExec implements ClientExecChain {
                 this.connManager.upgrade(managedConn, route, context);
                 tracker.layerProtocol(route.isSecure());
                 break;
-
+            // 不可达
             case HttpRouteDirector.UNREACHABLE:
                 // 出错, 主机不可达
                 throw new HttpException("Unable to establish route: " +
                         "planned = " + route + "; current = " + fact);
+                // 连接完成
             case HttpRouteDirector.COMPLETE:
                 // 标记连接完成
                 this.connManager.routeComplete(managedConn, route, context);
                 break;
+                // 其他情况  出错
             default:
                 throw new IllegalStateException("Unknown step indicator "
                         + step + " from RouteDirector.");

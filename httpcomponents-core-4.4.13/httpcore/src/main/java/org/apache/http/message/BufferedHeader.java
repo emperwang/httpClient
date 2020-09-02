@@ -70,11 +70,13 @@ public class BufferedHeader implements FormattedHeader, Cloneable, Serializable 
      *
      * @throws ParseException   in case of a parse error
      */
+    // 解析响应头
     public BufferedHeader(final CharArrayBuffer buffer)
         throws ParseException {
 
         super();
         Args.notNull(buffer, "Char array buffer");
+        // 获取 : 符号的位置,此符号前为name  符号后为 value
         final int colon = buffer.indexOf(':');
         if (colon == -1) {
             throw new ParseException
@@ -85,8 +87,11 @@ public class BufferedHeader implements FormattedHeader, Cloneable, Serializable 
             throw new ParseException
                 ("Invalid header: " + buffer.toString());
         }
+        // 记录此buffer
         this.buffer = buffer;
+        // 记录名字
         this.name = s;
+        // 记录value的位置
         this.valuePos = colon + 1;
     }
 

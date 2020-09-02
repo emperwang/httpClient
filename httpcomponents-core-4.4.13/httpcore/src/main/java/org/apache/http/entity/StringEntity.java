@@ -45,7 +45,7 @@ import org.apache.http.util.Args;
  * @since 4.0
  */
 public class StringEntity extends AbstractHttpEntity implements Cloneable {
-
+    // 记录 entity的 字节内容
     protected final byte[] content;
 
     /**
@@ -63,10 +63,13 @@ public class StringEntity extends AbstractHttpEntity implements Cloneable {
     public StringEntity(final String string, final ContentType contentType) throws UnsupportedCharsetException {
         super();
         Args.notNull(string, "Source string");
+        // 获取编码
         Charset charset = contentType != null ? contentType.getCharset() : null;
         if (charset == null) {
+            // 可见默认编码为 ISO-8859-1
             charset = HTTP.DEF_CONTENT_CHARSET;
         }
+        // 使用指定的编码格式 得到  内容
         this.content = string.getBytes(charset);
         if (contentType != null) {
             setContentType(contentType.toString());
@@ -128,6 +131,10 @@ public class StringEntity extends AbstractHttpEntity implements Cloneable {
      *
      * @since 4.2
      */
+    // 构造函数
+    // string为要传递的参数
+    // charset为 编码格式
+    // 创建了默认的content-type为 text/plain
     public StringEntity(final String string, final Charset charset) {
         this(string, ContentType.create(ContentType.TEXT_PLAIN.getMimeType(), charset));
     }
@@ -160,7 +167,7 @@ public class StringEntity extends AbstractHttpEntity implements Cloneable {
     public InputStream getContent() throws IOException {
         return new ByteArrayInputStream(this.content);
     }
-
+    // 把内容写入到输出流中
     @Override
     public void writeTo(final OutputStream outStream) throws IOException {
         Args.notNull(outStream, "Output stream");

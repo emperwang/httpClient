@@ -77,6 +77,7 @@ public class DefaultHttpResponseParser extends AbstractMessageParser<HttpRespons
             final HttpParams params) {
         super(buffer, lineParser, params);
         this.responseFactory = Args.notNull(responseFactory, "Response factory");
+        // 一行行的缓冲区
         this.lineBuf = new CharArrayBuffer(128);
     }
 
@@ -119,20 +120,24 @@ public class DefaultHttpResponseParser extends AbstractMessageParser<HttpRespons
     public DefaultHttpResponseParser(final SessionInputBuffer buffer) {
         this(buffer, null, null, MessageConstraints.DEFAULT);
     }
-
+    // 解析响应行
     @Override
     protected HttpResponse parseHead(
             final SessionInputBuffer sessionBuffer)
         throws IOException, HttpException, ParseException {
-
+        // 缓冲区清空
         this.lineBuf.clear();
         final int readLen = sessionBuffer.readLine(this.lineBuf);
+        // 没有读取到,则报错
         if (readLen == -1) {
             throw new NoHttpResponseException("The target server failed to respond");
         }
         //create the status line from the status string
+        // 一个解析行的 游标
         final ParserCursor cursor = new ParserCursor(0, this.lineBuf.length());
+        // 响应行 一般格式为  HTTP/1.1  201 \r\n
         final StatusLine statusline = lineParser.parseStatusLine(this.lineBuf, cursor);
+        // 创建 response
         return this.responseFactory.newHttpResponse(statusline, null);
     }
 

@@ -112,6 +112,7 @@ public class HttpRequestExecutor {
      * @throws HttpException in case of HTTP protocol violation or a processing
      *   problem.
      */
+    // 执行请求,并获取到 response
     public HttpResponse execute(
             final HttpRequest request,
             final HttpClientConnection conn,
@@ -120,10 +121,10 @@ public class HttpRequestExecutor {
         Args.notNull(conn, "Client connection");
         Args.notNull(context, "HTTP context");
         try {
-            // 发送请求,并得到 响应结果
+            // 1. 发送请求,并得到 响应结果
             HttpResponse response = doSendRequest(request, conn, context);
             if (response == null) {
-                // 如果上面没有得到响应体,这里会在此执行  直到得到响应体
+                // 2. 如果上面没有得到响应体,这里会在此执行  直到得到响应体
                 response = doReceiveResponse(request, conn, context);
             }
             return response;
@@ -191,6 +192,7 @@ public class HttpRequestExecutor {
      * @throws HttpException in case of HTTP protocol violation or a processing
      *   problem.
      */
+    // 真正发送请求
     protected HttpResponse doSendRequest(
             final HttpRequest request,
             final HttpClientConnection conn,
@@ -198,35 +200,42 @@ public class HttpRequestExecutor {
         Args.notNull(request, "HTTP request");
         Args.notNull(conn, "Client connection");
         Args.notNull(context, "HTTP context");
-
+        // 记录响应
         HttpResponse response = null;
-
+        // 记录一些属性到 context中
         context.setAttribute(HttpCoreContext.HTTP_CONNECTION, conn);
         context.setAttribute(HttpCoreContext.HTTP_REQ_SENT, Boolean.FALSE);
-        // 写请求头数据
+        // 1. 写请求头数据
         // "GET /index.html HTTP/1.1"  以及  requestHeader 写入到buffer中
+        // ---- 重点 --------
         conn.sendRequestHeader(request);
+        // 2. 如果有请求体,则这里处理请求体内容
         if (request instanceof HttpEntityEnclosingRequest) {
             // Check for expect-continue handshake. We have to flush the
             // headers and wait for an 100-continue response to handle it.
             // If we get a different response, we must not send the entity.
             boolean sendentity = true;
+            // 2.1 获取此次请求的协议版本
             final ProtocolVersion ver =
                 request.getRequestLine().getProtocolVersion();
+            // 2.2 根据请求头Expect ,判断是否继续进行
             if (((HttpEntityEnclosingRequest) request).expectContinue() &&
                 !ver.lessEquals(HttpVersion.HTTP_1_0)) {
-
+                // 2.3 flush 缓存到对端
                 conn.flush();
                 // As suggested by RFC 2616 section 8.2.3, we don't wait for a
                 // 100-continue response forever. On timeout, send the entity.
+                // 2.3 这里判断 是否有响应, 主要是从输入流中读取数据 或者 看输入缓存中是否有数据
                 if (conn.isResponseAvailable(this.waitForContinue)) {
-                    // 解析响应信息
+                    // 2.4 解析响应信息
                     response = conn.receiveResponseHeader();
                     // 是否有 请求体
+                    // 2.5 head 请求无请求体, 然后根据响应码 来判断是否有请求体
                     if (canResponseHaveBody(request, response)) {
-                        // 解析请求体
+                        // 2.6 解析请求体
                         conn.receiveResponseEntity(response);
                     }
+                    // 2.6 根据响应码 来判断是否继续
                     final int status = response.getStatusLine().getStatusCode();
                     if (status < 200) {
                         if (status != HttpStatus.SC_CONTINUE) {
@@ -240,13 +249,16 @@ public class HttpRequestExecutor {
                     }
                 }
             }
-            // 发送请求体
+            // 3. 发送请求体
             if (sendentity) {
                 conn.sendRequestEntity((HttpEntityEnclosingRequest) request);
             }
         }
+        // 3. flush 缓存,即把数据写出
         conn.flush();
+        // 4. 记录此处请求完成
         context.setAttribute(HttpCoreContext.HTTP_REQ_SENT, Boolean.TRUE);
+        // 5. 返回响应
         return response;
     }
 
@@ -265,6 +277,7 @@ public class HttpRequestExecutor {
      * @throws HttpException in case of HTTP protocol violation or a processing
      *   problem.
      */
+    // 响应的一个解析
     protected HttpResponse doReceiveResponse(
             final HttpRequest request,
             final HttpClientConnection conn,
@@ -274,20 +287,23 @@ public class HttpRequestExecutor {
         Args.notNull(context, "HTTP context");
         HttpResponse response = null;
         int statusCode = 0;
-
+        // 1. 如果还没有response 或者  statusCode 小于200, 则持续读取响应
         while (response == null || statusCode < HttpStatus.SC_OK) {
-
+            // 1.1 接收请求头
             response = conn.receiveResponseHeader();
+            // 1.2 获取响应中的响应码
             statusCode = response.getStatusLine().getStatusCode();
             if (statusCode < HttpStatus.SC_CONTINUE) {
                 throw new ProtocolException("Invalid response: " + response.getStatusLine());
             }
+            // 1.3 查看响应中是否有响应体
             if (canResponseHaveBody(request, response)) {
+                // 1.4如果有响应体,则解析响应体内容
                 conn.receiveResponseEntity(response);
             }
 
         } // while intermediate response
-
+        // 2. 返回接收到的响应
         return response;
     }
 

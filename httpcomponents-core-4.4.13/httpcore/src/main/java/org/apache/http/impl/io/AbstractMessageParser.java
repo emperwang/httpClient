@@ -171,6 +171,7 @@ public abstract class AbstractMessageParser<T extends HttpMessage> implements Ht
      *
      * @since 4.1
      */
+    // 解析响应头
     public static Header[] parseHeaders(
             final SessionInputBuffer inBuffer,
             final int maxHeaderCount,
@@ -183,12 +184,15 @@ public abstract class AbstractMessageParser<T extends HttpMessage> implements Ht
 
         CharArrayBuffer current = null;
         CharArrayBuffer previous = null;
+        // 死循环  持续读取数据
         for (;;) {
             if (current == null) {
                 current = new CharArrayBuffer(64);
             } else {
                 current.clear();
             }
+            // 从输入流中 读取行
+            // ---- 重点 --------
             final int readLen = inBuffer.readLine(current);
             if (readLen == -1 || current.length() < 1) {
                 break;
@@ -197,6 +201,8 @@ public abstract class AbstractMessageParser<T extends HttpMessage> implements Ht
             // Check for folded headers first
             // Detect LWS-char see HTTP/1.0 or HTTP/1.1 Section 2.2
             // discussion on folded headers
+
+            /// ???????  没太明白
             if ((current.charAt(0) == ' ' || current.charAt(0) == '\t') && previous != null) {
                 // we have continuation folded header
                 // so append value
@@ -215,6 +221,7 @@ public abstract class AbstractMessageParser<T extends HttpMessage> implements Ht
                 previous.append(' ');
                 previous.append(current, i, current.length() - i);
             } else {
+                // 记录读取到的一行数据
                 headerLines.add(current);
                 previous = current;
                 current = null;
@@ -227,6 +234,7 @@ public abstract class AbstractMessageParser<T extends HttpMessage> implements Ht
         for (int i = 0; i < headerLines.size(); i++) {
             final CharArrayBuffer buffer = headerLines.get(i);
             try {
+                // 解析响应头
                 headers[i] = parser.parseHeader(buffer);
             } catch (final ParseException ex) {
                 throw new ProtocolException(ex.getMessage());

@@ -106,24 +106,27 @@ public class DefaultHttpClientConnectionOperator implements HttpClientConnection
             final int connectTimeout,
             final SocketConfig socketConfig,
             final HttpContext context) throws IOException {
-        // 获取socket factory
+        // 1. 获取socket factory
+        // 工厂类根据协议的不同有两种, http  和  https
         final Lookup<ConnectionSocketFactory> registry = getSocketFactoryRegistry(context);
         // 根据scheme是http 还是https来获取具体的socketfactory
         final ConnectionSocketFactory sf = registry.lookup(host.getSchemeName());
+        // 如果没有找到 对应的工厂类,则抛出错误
         if (sf == null) {
             throw new UnsupportedSchemeException(host.getSchemeName() +
                     " protocol is not supported");
         }
-        // 解析主机名字,获取目的ip
+        // 2. 解析主机名字,获取目的ip
         final InetAddress[] addresses = host.getAddress() != null ?
                 new InetAddress[] { host.getAddress() } : this.dnsResolver.resolve(host.getHostName());
-        // 解析目的主机的 port
+        // 2.1 解析目的主机的 port
         final int port = this.schemePortResolver.resolve(host);
         for (int i = 0; i < addresses.length; i++) {
             final InetAddress address = addresses[i];
             final boolean last = i == addresses.length - 1;
-            // 具体创建socket的操作
+            // 3. 具体创建socket的操作
             Socket sock = sf.createSocket(context);
+            // 4. 配置socket
             // 设置socket的超时
             sock.setSoTimeout(socketConfig.getSoTimeout());
             // 是否重用地址
@@ -140,7 +143,7 @@ public class DefaultHttpClientConnectionOperator implements HttpClientConnection
             if (socketConfig.getSndBufSize() > 0) {
                 sock.setSendBufferSize(socketConfig.getSndBufSize());
             }
-
+            // 发送方socket被调用close之后，是否延迟关闭，继续发送数据。等待时间超时才关闭
             final int linger = socketConfig.getSoLinger();
             if (linger >= 0) {
                 sock.setSoLinger(true, linger);
@@ -154,10 +157,10 @@ public class DefaultHttpClientConnectionOperator implements HttpClientConnection
                 this.log.debug("Connecting to " + remoteAddress);
             }
             try {
-                // 连接目的主机
+                // 5. 连接目的主机
                 sock = sf.connectSocket(
                         connectTimeout, sock, host, remoteAddress, localAddress, context);
-                // 重新把 connection 和 socket 进行绑定
+                // 6. 重新把 connection 和 socket 进行绑定
                 conn.bind(sock);
                 if (this.log.isDebugEnabled()) {
                     this.log.debug("Connection established " + conn);

@@ -40,7 +40,7 @@ import org.apache.http.util.Args;
  * @since 4.3
  */
 public class MessageConstraints implements Cloneable {
-
+    // 如果使用default默认的,那么maxLineLength=maxHeaderCount=-1
     public static final MessageConstraints DEFAULT = new Builder().build();
 
     private final int maxLineLength;

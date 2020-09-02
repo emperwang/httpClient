@@ -75,25 +75,30 @@ public class StrictContentLengthStrategy implements ContentLengthStrategy {
     public StrictContentLengthStrategy() {
         this(IDENTITY);
     }
-
+    // 决定entity的输出长度
     @Override
     public long determineLength(final HttpMessage message) throws HttpException {
         Args.notNull(message, "HTTP message");
         // Although Transfer-Encoding is specified as a list, in practice
         // it is either missing or has the single value "chunked". So we
         // treat it as a single-valued header here.
-        // 获取 Transfer-Encoding , 根据其 encoding的类型来决定长度
+        // 1. 获取 Transfer-Encoding , 根据其 encoding的类型来决定长度
         final Header transferEncodingHeader = message.getFirstHeader(HTTP.TRANSFER_ENCODING);
         if (transferEncodingHeader != null) {
             final String s = transferEncodingHeader.getValue();
+            // 1.1 如果Transfer-Encoding值为 chunked
             if (HTTP.CHUNK_CODING.equalsIgnoreCase(s)) {
+                // 如果版本小于1.0, 则不支持 如果Transfer-Encoding = chunked
                 if (message.getProtocolVersion().lessEquals(HttpVersion.HTTP_1_0)) {
                     throw new ProtocolException(
                             "Chunked transfer encoding not allowed for " +
                             message.getProtocolVersion());
                 }
+                // 则返回长度为 -2
                 return CHUNKED;
+                // 1.2 如果 Transfer-Encoding值为 identity
             } else if (HTTP.IDENTITY_CODING.equalsIgnoreCase(s)) {
+                // 返回长度为-1
                 return IDENTITY;
             } else {
                 throw new ProtocolException(
@@ -105,6 +110,7 @@ public class StrictContentLengthStrategy implements ContentLengthStrategy {
         if (contentLengthHeader != null) {
             final String s = contentLengthHeader.getValue();
             try {
+                // 得到 Content-Length的值,其表示的就是entity的长度
                 final long len = Long.parseLong(s);
                 if (len < 0) {
                     throw new ProtocolException("Negative content length: " + s);

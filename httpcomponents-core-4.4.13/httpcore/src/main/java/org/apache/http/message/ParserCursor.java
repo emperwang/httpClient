@@ -50,8 +50,11 @@ public class ParserCursor {
         if (lowerBound > upperBound) {
             throw new IndexOutOfBoundsException("Lower bound cannot be greater then upper bound");
         }
+        // 开始位置
         this.lowerBound = lowerBound;
+        // 最后位置
         this.upperBound = upperBound;
+        // 当前位置
         this.pos = lowerBound;
     }
 

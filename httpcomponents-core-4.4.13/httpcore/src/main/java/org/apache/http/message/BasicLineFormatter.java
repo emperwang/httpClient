@@ -77,6 +77,7 @@ public class BasicLineFormatter implements LineFormatter {
      * @return  the cleared argument buffer if there is one, or
      *          a new empty buffer that can be used for formatting
      */
+    // 初始化buffer, buffer有内容则清空,buffer不存在则创建
     protected CharArrayBuffer initBuffer(final CharArrayBuffer charBuffer) {
         CharArrayBuffer buffer = charBuffer;
         if (buffer != null) {
@@ -182,6 +183,7 @@ public class BasicLineFormatter implements LineFormatter {
      *                  never {@code null}
      * @param reqline   the request line to format, never {@code null}
      */
+    // 格式化 request line 到buffer中
     protected void doFormatRequestLine(final CharArrayBuffer buffer,
                                        final RequestLine reqline) {
         // 获取请求方法
@@ -280,16 +282,18 @@ public class BasicLineFormatter implements LineFormatter {
 
 
     // non-javadoc, see interface LineFormatter
+    // 格式化请求头
     @Override
     public CharArrayBuffer formatHeader(final CharArrayBuffer buffer,
                                         final Header header) {
         Args.notNull(header, "Header");
         final CharArrayBuffer result;
-
+        // 如果header已经格式化过了,则就不会再次进行format了
         if (header instanceof FormattedHeader) {
             // If the header is backed by a buffer, re-use the buffer
             result = ((FormattedHeader)header).getBuffer();
         } else {
+            // 格式化操作
             result = initBuffer(buffer);
             doFormatHeader(result, header);
         }
@@ -306,19 +310,25 @@ public class BasicLineFormatter implements LineFormatter {
      *                  never {@code null}
      * @param header    the header to format, never {@code null}
      */
+    // 格式化请求头
     protected void doFormatHeader(final CharArrayBuffer buffer,
                                   final Header header) {
+        // 获得请求头的 name
         final String name = header.getName();
+        // 获得请求头的 value
         final String value = header.getValue();
-
+        // name: value(换行)   +2 应该是 ": "
         int len = name.length() + 2;
         if (value != null) {
             len += value.length();
         }
+        // 保证buffer的长度足够
         buffer.ensureCapacity(len);
-
+        // 追加名字
         buffer.append(name);
+        // 追加
         buffer.append(": ");
+        // 追加 value
         if (value != null) {
             buffer.ensureCapacity(buffer.length() + value.length());
             for (int valueIndex = 0; valueIndex < value.length(); valueIndex++) {

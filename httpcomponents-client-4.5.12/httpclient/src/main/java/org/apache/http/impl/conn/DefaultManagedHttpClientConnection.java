@@ -112,7 +112,7 @@ public class DefaultManagedHttpClientConnection extends DefaultBHttpClientConnec
     public void setAttribute(final String id, final Object obj) {
         this.attributes.put(id, obj);
     }
-
+    // 绑定创建的socket连接到此 连接池连接中
     @Override
     public void bind(final Socket socket) throws IOException {
         if (this.shutdown) {

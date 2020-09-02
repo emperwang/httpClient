@@ -343,7 +343,7 @@ public class SSLConnectionSocketFactory implements LayeredConnectionSocketFactor
     public Socket createSocket(final HttpContext context) throws IOException {
         return SocketFactory.getDefault().createSocket();
     }
-
+    // ssl 连接的连接
     @Override
     public Socket connectSocket(
             final int connectTimeout,
@@ -377,7 +377,9 @@ public class SSLConnectionSocketFactory implements LayeredConnectionSocketFactor
         if (sock instanceof SSLSocket) {
             final SSLSocket sslsock = (SSLSocket) sock;
             this.log.debug("Starting handshake");
+            // ssl 握手开始
             sslsock.startHandshake();
+            // 主机名验证
             verifyHostname(sslsock, host.getHostName());
             return sock;
         }

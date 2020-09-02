@@ -110,6 +110,7 @@ public abstract class AbstractHttpEntity implements HttpEntity {
      * @param contentType       the new Content-Type header, or
      *                          {@code null} to unset
      */
+    // 记录 Content-Type 请求头
     public void setContentType(final Header contentType) {
         this.contentType = contentType;
     }
@@ -122,6 +123,7 @@ public abstract class AbstractHttpEntity implements HttpEntity {
      * @param ctString     the new Content-Type header, or
      *                     {@code null} to unset
      */
+    // 记录一个请求头
     public void setContentType(final String ctString) {
         Header h = null;
         if (ctString != null) {

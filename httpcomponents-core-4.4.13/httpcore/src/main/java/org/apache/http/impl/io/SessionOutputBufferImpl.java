@@ -126,7 +126,7 @@ public class SessionOutputBufferImpl implements SessionOutputBuffer, BufferInfo 
         Asserts.notNull(outStream, "Output stream");
         this.outStream.write(b, off, len);
     }
-
+    // stream flush操作
     private void flushStream() throws IOException {
         if (this.outStream != null) {
             this.outStream.flush();
@@ -183,9 +183,10 @@ public class SessionOutputBufferImpl implements SessionOutputBuffer, BufferInfo 
         }
         write(b, 0, b.length);
     }
-
+    // 把字节数据写入到 buffer中
     @Override
     public void write(final int b) throws IOException {
+        // 如果允许分段,则直接追加到buffer中
         if (this.fragementSizeHint > 0) {
             if (this.buffer.isFull()) {
                 flushBuffer();
@@ -249,14 +250,19 @@ public class SessionOutputBufferImpl implements SessionOutputBuffer, BufferInfo 
             int remaining = charbuffer.length();
             // 把输出写入到 buffer中
             while (remaining > 0) {
+                // chunk 可写入的大小
                 int chunk = this.buffer.capacity() - this.buffer.length();
+                // 选择一个小的
                 chunk = Math.min(chunk, remaining);
+                // 开始追加数据到  buffer中
                 if (chunk > 0) {
                     this.buffer.append(charbuffer, off, chunk);
                 }
+                // 如果buffer中的数据满了,则flush一次,即把buffer中的数据写入到 socket中
                 if (this.buffer.isFull()) {
                     flushBuffer();
                 }
+                // 位置信息 更新
                 off += chunk;
                 remaining -= chunk;
             }
@@ -264,6 +270,7 @@ public class SessionOutputBufferImpl implements SessionOutputBuffer, BufferInfo 
             // 如果有编码,则使用编码写入
             // charBuffer 使用
             final CharBuffer cbuf = CharBuffer.wrap(charbuffer.buffer(), 0, charbuffer.length());
+            // 编码数据 然后再写入到 buffer中
             writeEncoded(cbuf);
         }
         // 写入换行符
@@ -290,7 +297,7 @@ public class SessionOutputBufferImpl implements SessionOutputBuffer, BufferInfo 
         handleEncodingResult(result);
         this.bbuf.clear();
     }
-
+    // 把编码后的信息  写入到buffer中
     private void handleEncodingResult(final CoderResult result) throws IOException {
         // 如果有错误,则抛出错误
         if (result.isError()) {
@@ -302,6 +309,7 @@ public class SessionOutputBufferImpl implements SessionOutputBuffer, BufferInfo 
             // 把bbuf中的信息 写到 buffer中
             write(this.bbuf.get());
         }
+        // 把buffer中省下数据拷贝到开始
         this.bbuf.compact();
     }
 

@@ -146,12 +146,15 @@ public final class ContentType implements Serializable {
     private final String mimeType;
     private final Charset charset;
     private final NameValuePair[] params;
-
+    // content-type 请求头
     ContentType(
             final String mimeType,
             final Charset charset) {
+        // minmeType
         this.mimeType = mimeType;
+        // 编码
         this.charset = charset;
+        // 参数
         this.params = null;
     }
 
@@ -224,6 +227,7 @@ public final class ContentType implements Serializable {
      * @param charset charset.
      * @return content type
      */
+    // 创建一个 请求头 Content-type
     public static ContentType create(final String mimeType, final Charset charset) {
         final String normalizedMimeType = Args.notBlank(mimeType, "MIME type").toLowerCase(Locale.ROOT);
         Args.check(valid(normalizedMimeType), "MIME type may not contain reserved characters");

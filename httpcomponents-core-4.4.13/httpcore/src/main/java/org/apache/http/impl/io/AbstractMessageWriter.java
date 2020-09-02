@@ -102,19 +102,20 @@ public abstract class AbstractMessageWriter<T extends HttpMessage> implements Ht
      * @throws IOException in case of an I/O error.
      */
     protected abstract void writeHeadLine(T message) throws IOException;
-
+    // 输出 请求信息,不包括请求体
     @Override
     public void write(final T message) throws IOException, HttpException {
         Args.notNull(message, "HTTP message");
-        // 把"GET /index.html HTTP/1.1" 写入
+        // 1. 把"GET /index.html HTTP/1.1" 写入
         writeHeadLine(message);
-        // 请求 头 写入
+        // 2. 请求 头 写入
         for (final HeaderIterator it = message.headerIterator(); it.hasNext(); ) {
             final Header header = it.nextHeader();
             this.sessionBuffer.writeLine
                 (lineFormatter.formatHeader(this.lineBuf, header));
         }
         this.lineBuf.clear();
+        // 这里相当于 再写入一个 空行, 用于和 请求体 隔离开
         this.sessionBuffer.writeLine(this.lineBuf);
     }
 

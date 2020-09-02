@@ -133,12 +133,15 @@ public class BHttpConnectionBase implements HttpInetConnection {
         // 这是一个 保存socket 连接的 引用
         this.socketHolder = new AtomicReference<Socket>();
     }
-
+    // 输入输出buffer 绑定 到输入输出流
     protected void ensureOpen() throws IOException {
+        // 获取socket
         final Socket socket = this.socketHolder.get();
+        // 如果还没有创建 连接,则报错
         if (socket == null) {
             throw new ConnectionClosedException();
         }
+        // 绑定输入 buffer
         if (!this.inBuffer.isBound()) {
             this.inBuffer.bind(getSocketInputStream(socket));
         }
@@ -196,22 +199,27 @@ public class BHttpConnectionBase implements HttpInetConnection {
         return this.socketHolder.get();
     }
     // 创建输出流
+    // 注入哦 这里的 outBuffer 就是输出缓存区
     protected OutputStream createOutputStream(
             final long len,
             final SessionOutputBuffer outbuffer) {
+        // 如果长度为  -2 ,则是 chunked 流
         if (len == ContentLengthStrategy.CHUNKED) {
             return new ChunkedOutputStream(2048, outbuffer);
+            // 如果长度为 -1,则创建 IdentityOutputStream 流
         } else if (len == ContentLengthStrategy.IDENTITY) {
             return new IdentityOutputStream(outbuffer);
         } else {
+            // 否则创建 ContentLengthOutputStream
             return new ContentLengthOutputStream(outbuffer, len);
         }
     }
-
+    // 准备输出
     protected OutputStream prepareOutput(final HttpMessage message) throws HttpException {
         // 获取要 输出的消息的长度
         final long len = this.outgoingContentStrategy.determineLength(message);
         // 即 其会把 len长度的数据 写到 outbuffer中
+        // 注意这里的 outbuffer 和socket 输出流绑定的
         return createOutputStream(len, this.outbuffer);
     }
     // 创建一个输入流
@@ -228,12 +236,14 @@ public class BHttpConnectionBase implements HttpInetConnection {
             return new ContentLengthInputStream(inBuffer, len);
         }
     }
-
+    // 解析请求体
     protected HttpEntity prepareInput(final HttpMessage message) throws HttpException {
+        // 先创建一个请求体
         final BasicHttpEntity entity = new BasicHttpEntity();
         // 得到 长度
         final long len = this.incomingContentStrategy.determineLength(message);
         // 创建输入流
+        // 根据不同的情况 创建输入流 来进行数据读取
         final InputStream inStream = createInputStream(len, this.inBuffer);
         if (len == ContentLengthStrategy.CHUNKED) {
             entity.setChunked(true);
@@ -248,11 +258,12 @@ public class BHttpConnectionBase implements HttpInetConnection {
             entity.setContentLength(len);
             entity.setContent(inStream);
         }
-
+        //  获取 Content-Type
         final Header contentTypeHeader = message.getFirstHeader(HTTP.CONTENT_TYPE);
         if (contentTypeHeader != null) {
             entity.setContentType(contentTypeHeader);
         }
+        // 获取 Content-Encoding 请求头
         final Header contentEncodingHeader = message.getFirstHeader(HTTP.CONTENT_ENCODING);
         if (contentEncodingHeader != null) {
             entity.setContentEncoding(contentEncodingHeader);
@@ -355,23 +366,29 @@ public class BHttpConnectionBase implements HttpInetConnection {
             }
         }
     }
-
+    // 设置超时时间 去读取数据
     private int fillInputBuffer(final int timeout) throws IOException {
         final Socket socket = this.socketHolder.get();
         final int oldtimeout = socket.getSoTimeout();
         try {
+            // 表示等待输入流数据超时时间
+            // 设置读取数据的超时时间
             socket.setSoTimeout(timeout);
             return this.inBuffer.fillBuffer();
         } finally {
+            // 最后把 时间设置回来
             socket.setSoTimeout(oldtimeout);
         }
     }
-
+    // 在规定的时间从输入流中读取数据
     protected boolean awaitInput(final int timeout) throws IOException {
+        // 如果输入缓存中有数据  则读取数据
         if (this.inBuffer.hasBufferedData()) {
             return true;
         }
+        // 从输入流中 读取数据
         fillInputBuffer(timeout);
+        // 在判断 输入缓存中是否有数据
         return this.inBuffer.hasBufferedData();
     }
 

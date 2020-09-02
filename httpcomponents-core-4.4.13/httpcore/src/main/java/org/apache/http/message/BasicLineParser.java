@@ -114,19 +114,23 @@ public class BasicLineParser implements LineParser {
 
 
     // non-javadoc, see interface LineParser
+    // 解析 协议版本
     @Override
     public ProtocolVersion parseProtocolVersion(final CharArrayBuffer buffer,
                                                 final ParserCursor cursor) throws ParseException {
         Args.notNull(buffer, "Char array buffer");
         Args.notNull(cursor, "Parser cursor");
+        // 获取协议 名称
         final String protoname = this.protocol.getProtocol();
+        // 获取协议的长度
         final int protolength  = protoname.length();
-
+        // 获取 开始点
         final int indexFrom = cursor.getPos();
+        // 获取 结束点
         final int indexTo = cursor.getUpperBound();
-
+        // 跳过空白
         skipWhitespace(buffer, cursor);
-
+        // 跳过空白后  获取新的位置信息
         int i = cursor.getPos();
 
         // long enough for "HTTP/1.1"?
@@ -138,9 +142,12 @@ public class BasicLineParser implements LineParser {
 
         // check the protocol name and slash
         boolean ok = true;
+        // 解析 HTTP
         for (int j=0; ok && (j<protolength); j++) {
             ok = (buffer.charAt(i+j) == protoname.charAt(j));
         }
+        // 响应行格式一般为:  HTTP/1.1 201
+        //  解析 HTTP后的/
         if (ok) {
             ok = (buffer.charAt(i+protolength) == '/');
         }
@@ -151,7 +158,7 @@ public class BasicLineParser implements LineParser {
         }
 
         i += protolength+1;
-
+        // 找到 . 的位置
         final int period = buffer.indexOf('.', i, indexTo);
         if (period == -1) {
             throw new ParseException
@@ -160,6 +167,7 @@ public class BasicLineParser implements LineParser {
         }
         final int major;
         try {
+            // 获取主版本号
             major = Integer.parseInt(buffer.substringTrimmed(i, period));
         } catch (final NumberFormatException e) {
             throw new ParseException
@@ -167,22 +175,24 @@ public class BasicLineParser implements LineParser {
                  buffer.substring(indexFrom, indexTo));
         }
         i = period + 1;
-
+        // 空格的位置
+        // 响应行格式一般为:  HTTP/1.1 201 \r\n
         int blank = buffer.indexOf(' ', i, indexTo);
         if (blank == -1) {
             blank = indexTo;
         }
         final int minor;
         try {
+            // 获取此版本号
             minor = Integer.parseInt(buffer.substringTrimmed(i, blank));
         } catch (final NumberFormatException e) {
             throw new ParseException(
                 "Invalid protocol minor version number: " +
                 buffer.substring(indexFrom, indexTo));
         }
-
+        // 更新 pos到 blank的位置
         cursor.updatePos(blank);
-
+        // 创建版本
         return createProtocolVersion(major, minor);
 
     } // parseProtocolVersion
@@ -356,28 +366,37 @@ public class BasicLineParser implements LineParser {
 
 
     // non-javadoc, see interface LineParser
+    // 解析 响应码 的行
     @Override
     public StatusLine parseStatusLine(final CharArrayBuffer buffer,
                                       final ParserCursor cursor) throws ParseException {
         Args.notNull(buffer, "Char array buffer");
         Args.notNull(cursor, "Parser cursor");
+        // 获取 第一个位置
         final int indexFrom = cursor.getPos();
+        // 最后一个位置
         final int indexTo = cursor.getUpperBound();
 
         try {
             // handle the HTTP-Version
+            // 解析协议 版本
+            // 响应行格式一般为:  HTTP/1.1 201 \r\n
+            // 此处主要是解析  1.1 这个值
             final ProtocolVersion ver = parseProtocolVersion(buffer, cursor);
 
             // handle the Status-Code
+            // 跳过空格
             skipWhitespace(buffer, cursor);
             int i = cursor.getPos();
-
+            // 获取下一个空格的位置,即 \r\n 前的空格
             int blank = buffer.indexOf(' ', i, indexTo);
             if (blank < 0) {
                 blank = indexTo;
             }
             final int statusCode;
+            // 获取 响应码
             final String s = buffer.substringTrimmed(i, blank);
+            // 判断响应码 是否都是 数字
             for (int j = 0; j < s.length(); j++) {
                 if (!Character.isDigit(s.charAt(j))) {
                     throw new ParseException(
@@ -386,6 +405,7 @@ public class BasicLineParser implements LineParser {
                 }
             }
             try {
+                // 解析响应码
                 statusCode = Integer.parseInt(s);
             } catch (final NumberFormatException e) {
                 throw new ParseException(
@@ -395,6 +415,7 @@ public class BasicLineParser implements LineParser {
             //handle the Reason-Phrase
             i = blank;
             final String reasonPhrase;
+            // 后面还有信息的话, 也同样获取到,作为 reason
             if (i < indexTo) {
                 reasonPhrase = buffer.substringTrimmed(i, indexTo);
             } else {
@@ -419,6 +440,7 @@ public class BasicLineParser implements LineParser {
      *
      * @return  a new status line with the given data
      */
+    // 创建响应码 信息
     protected StatusLine createStatusLine(final ProtocolVersion ver,
                                           final int status,
                                           final String reason) {
@@ -440,11 +462,13 @@ public class BasicLineParser implements LineParser {
 
 
     // non-javadoc, see interface LineParser
+    // 解析响应头
     @Override
     public Header parseHeader(final CharArrayBuffer buffer)
         throws ParseException {
 
         // the actual parser code is in the constructor of BufferedHeader
+        // 解析buffer中的响应头
         return new BufferedHeader(buffer);
     }
 
