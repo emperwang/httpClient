@@ -75,6 +75,7 @@ public abstract class AbstractConnPool<T, C, E extends PoolEntry<T, C>>
     // 连接工厂类
     private final ConnFactory<T, C> connFactory;
     // 记录host 到 routeSpecificPool的映射关闭
+    // RouteSpecificPool 记录对应hostRoute的连接,即对应host的一个连接池
     private final Map<T, RouteSpecificPool<T, C, E>> routeToPool;
     // 租用的连接
     private final Set<E> leased;

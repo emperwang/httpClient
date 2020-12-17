@@ -53,6 +53,7 @@ class ConnectionHolder implements ConnectionReleaseTrigger, Cancellable, Closeab
     private final HttpClientConnectionManager manager;
     // 被管理的连接
     private final HttpClientConnection managedConn;
+    // 是否释放标志
     private final AtomicBoolean released;
     // 是否可以被 重用的标志
     private volatile boolean reusable;
@@ -165,6 +166,10 @@ class ConnectionHolder implements ConnectionReleaseTrigger, Cancellable, Closeab
         return this.released.get();
     }
 
+    /*
+     关闭连接
+     可以看到参数为false,即不进行复用, 可以看到连接没有进行复用,即直接关闭掉
+     */
     @Override
     public void close() throws IOException {
         releaseConnection(false);

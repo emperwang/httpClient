@@ -600,6 +600,7 @@ public class PoolingHttpClientConnectionManager
     static class ConfigData {
 
         private final Map<HttpHost, SocketConfig> socketConfigMap;
+        // 存储对应host的 连接配置
         private final Map<HttpHost, ConnectionConfig> connectionConfigMap;
         private volatile SocketConfig defaultSocketConfig;
         private volatile ConnectionConfig defaultConnectionConfig;
@@ -668,6 +669,7 @@ public class PoolingHttpClientConnectionManager
                 config = this.configData.getConnectionConfig(route.getProxyHost());
             }
             if (config == null) {
+                // 获取连接的配置信息
                 config = this.configData.getConnectionConfig(route.getTargetHost());
             }
             if (config == null) {
@@ -676,7 +678,7 @@ public class PoolingHttpClientConnectionManager
             if (config == null) {
                 config = ConnectionConfig.DEFAULT;
             }
-            // 常见连接
+            // 创建连接
             return this.connFactory.create(route, config);
         }
 

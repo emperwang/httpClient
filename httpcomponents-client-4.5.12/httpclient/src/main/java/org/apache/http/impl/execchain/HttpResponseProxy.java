@@ -55,7 +55,10 @@ class HttpResponseProxy implements CloseableHttpResponse {
         this.connHolder = connHolder;
         ResponseEntityProxy.enchance(original, connHolder);
     }
-
+    /*
+       关闭连接
+       从这里往下看,可以看到对象close时,其实就是直接关闭了,并没有复用
+     */
     @Override
     public void close() throws IOException {
         if (this.connHolder != null) {
